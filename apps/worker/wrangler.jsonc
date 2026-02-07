@@ -3,4 +3,17 @@
   "name": "usedby-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-07",
+  "kv_namespaces": [
+    {
+      "binding": "DEPENDENTS_CACHE",
+      // Replace with the actual ID after running:
+      // wrangler kv namespace create DEPENDENTS_CACHE
+      "id": "TODO",
+    },
+  ],
+  "vars": {
+    // Non-secret environment variables go here
+  },
+  // Secrets (set via `wrangler secret put <NAME>`):
+  // - GITHUB_TOKEN: GitHub personal access token for code search API
 }

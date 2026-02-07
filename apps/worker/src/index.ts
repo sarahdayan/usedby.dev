@@ -1,7 +1,10 @@
-type Env = Record<string, unknown>;
+interface Env {
+  DEPENDENTS_CACHE: KVNamespace;
+  GITHUB_TOKEN: string;
+}
 
 export default {
-  async fetch(request) {
+  async fetch(request, _env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/') {
