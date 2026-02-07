@@ -1,13 +1,29 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #ffffff;
+  --color-fg: #111111;
+  --color-fg-muted: #666666;
+  --color-border: #e5e5e5;
+  --color-code-bg: #1a1a1a;
+  --max-width: 720px;
+  --spacing-section: 120px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-bg: #0a0a0a;
+    --color-fg: #ededed;
+    --color-fg-muted: #999999;
+    --color-border: #2a2a2a;
+    --color-code-bg: #1a1a1a;
   }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html,
@@ -17,14 +33,10 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  color: var(--color-fg);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -32,19 +44,8 @@ a {
   text-decoration: none;
 }
 
-.imgDark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-
-  .imgLight {
-    display: none;
-  }
-  .imgDark {
-    display: unset;
-  }
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
