@@ -1,3 +1,5 @@
+import { EmbedGenerator } from './components';
+
 const examples = [
   { owner: 'facebook', repo: 'react', file: 'facebook-react.svg' },
   { owner: 'vercel', repo: 'next.js', file: 'vercel-next.js.svg' },
@@ -66,14 +68,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-section border-t border-border text-center max-sm:py-20">
-        <h2 className="text-[2rem] font-bold tracking-[-0.03em] leading-[1.2] mb-4 max-sm:text-[1.5rem]">
-          Try it with your library
-        </h2>
-        <p className="font-mono text-[1.0625rem] text-fg-muted">
-          https://usedby.dev/:owner/:repo
-        </p>
-      </section>
+      <EmbedGenerator />
 
       <footer className="py-12 border-t border-border text-center">
         <a
