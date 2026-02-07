@@ -9,6 +9,10 @@ export interface DependentRepo {
   archived: boolean;
 }
 
+export interface ScoredRepo extends DependentRepo {
+  score: number;
+}
+
 export interface SearchResult {
   repos: DependentRepo[];
   partial: boolean;
