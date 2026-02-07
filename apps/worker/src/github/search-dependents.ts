@@ -59,6 +59,7 @@ export async function searchDependents(
         lastPush: repo.pushed_at ?? '',
         avatarUrl: repo.owner.avatar_url,
         isFork: repo.fork,
+        archived: false,
       });
     }
 

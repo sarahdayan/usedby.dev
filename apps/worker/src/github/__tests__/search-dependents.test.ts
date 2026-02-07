@@ -57,6 +57,7 @@ describe('searchDependents', () => {
         lastPush: '2025-01-01T00:00:00Z',
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
+        archived: false,
       },
       {
         owner: 'corp',
@@ -66,6 +67,7 @@ describe('searchDependents', () => {
         lastPush: '2025-01-01T00:00:00Z',
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
+        archived: false,
       },
     ]);
     expect(results.partial).toBe(false);
@@ -228,6 +230,7 @@ describe('searchDependents', () => {
       lastPush: '2025-06-15T12:00:00Z',
       avatarUrl: 'https://avatars.githubusercontent.com/u/42',
       isFork: true,
+      archived: false,
     });
   });
 

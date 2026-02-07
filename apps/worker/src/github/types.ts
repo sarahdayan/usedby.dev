@@ -6,6 +6,7 @@ export interface DependentRepo {
   lastPush: string;
   avatarUrl: string;
   isFork: boolean;
+  archived: boolean;
 }
 
 export interface SearchResult {
@@ -13,4 +14,9 @@ export interface SearchResult {
   partial: boolean;
   rateLimited: boolean;
   capped: boolean;
+}
+
+export interface EnrichResult {
+  repos: DependentRepo[];
+  rateLimited: boolean;
 }
