@@ -1,0 +1,5 @@
+{
+  "extends": "@usedby.dev/typescript-config/cloudflare.json",
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
