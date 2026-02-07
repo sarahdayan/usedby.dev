@@ -1,4 +1,5 @@
 import { getDependents } from './cache/get-dependents';
+import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
 import { renderMosaic } from './svg/render-mosaic';
 
@@ -10,6 +11,18 @@ interface Env {
 const VALID_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runScheduledRefresh(env)
+        .then((result) => {
+          console.log('[scheduled] Refresh complete:', JSON.stringify(result));
+        })
+        .catch((error) => {
+          console.error('[scheduled] Refresh failed:', error);
+        })
+    );
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 

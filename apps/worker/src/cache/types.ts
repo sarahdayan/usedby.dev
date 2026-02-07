@@ -1,10 +1,13 @@
 import type { ScoredRepo } from '../github/types';
 
-export interface CacheEntry {
-  repos: ScoredRepo[];
+export interface CacheMetadata {
   fetchedAt: string;
   lastAccessedAt: string;
   partial: boolean;
+}
+
+export interface CacheEntry extends CacheMetadata {
+  repos: ScoredRepo[];
 }
 
 export type CacheResult =

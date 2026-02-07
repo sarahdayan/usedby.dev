@@ -1,4 +1,4 @@
-import type { CacheEntry, CacheResult } from './types';
+import type { CacheEntry, CacheMetadata, CacheResult } from './types';
 
 export const FRESH_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -27,12 +27,22 @@ export async function readCache(
   return { status: 'stale', entry };
 }
 
+function buildMetadata(entry: CacheEntry): CacheMetadata {
+  return {
+    fetchedAt: entry.fetchedAt,
+    lastAccessedAt: entry.lastAccessedAt,
+    partial: entry.partial,
+  };
+}
+
 export async function writeCache(
   kv: KVNamespace,
   key: string,
   entry: CacheEntry
 ): Promise<void> {
-  await kv.put(key, JSON.stringify(entry));
+  await kv.put(key, JSON.stringify(entry), {
+    metadata: buildMetadata(entry),
+  });
 }
 
 export async function touchLastAccessed(
@@ -46,5 +56,7 @@ export async function touchLastAccessed(
     lastAccessedAt: now.toISOString(),
   };
 
-  await kv.put(key, JSON.stringify(updated));
+  await kv.put(key, JSON.stringify(updated), {
+    metadata: buildMetadata(updated),
+  });
 }

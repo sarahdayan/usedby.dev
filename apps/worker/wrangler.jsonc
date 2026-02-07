@@ -16,4 +16,7 @@
   },
   // Secrets (set via `wrangler secret put <NAME>`):
   // - GITHUB_TOKEN: GitHub personal access token for code search API
+  "triggers": {
+    "crons": ["0 4 * * *"],
+  },
 }

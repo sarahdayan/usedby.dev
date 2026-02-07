@@ -74,13 +74,19 @@ describe('readCache', () => {
 });
 
 describe('writeCache', () => {
-  it('calls kv.put with JSON-serialized entry', async () => {
+  it('calls kv.put with JSON-serialized entry and metadata', async () => {
     const kv = createMockKV();
     const entry = createEntry();
 
     await writeCache(kv, 'npm:react', entry);
 
-    expect(kv.put).toHaveBeenCalledWith('npm:react', JSON.stringify(entry));
+    expect(kv.put).toHaveBeenCalledWith('npm:react', JSON.stringify(entry), {
+      metadata: {
+        fetchedAt: entry.fetchedAt,
+        lastAccessedAt: entry.lastAccessedAt,
+        partial: entry.partial,
+      },
+    });
   });
 });
 
@@ -101,6 +107,24 @@ describe('touchLastAccessed', () => {
     expect(written.fetchedAt).toBe('2025-01-14T08:00:00Z');
     expect(written.repos).toEqual(entry.repos);
     expect(written.partial).toBe(entry.partial);
+  });
+
+  it('passes metadata to kv.put', async () => {
+    const kv = createMockKV();
+    const entry = createEntry({
+      fetchedAt: '2025-01-14T08:00:00Z',
+      lastAccessedAt: '2025-01-15T10:00:00Z',
+    });
+
+    await touchLastAccessed(kv, 'npm:react', entry, NOW);
+
+    expect(kv.put).toHaveBeenCalledWith('npm:react', expect.any(String), {
+      metadata: {
+        fetchedAt: '2025-01-14T08:00:00Z',
+        lastAccessedAt: NOW.toISOString(),
+        partial: false,
+      },
+    });
   });
 });
 

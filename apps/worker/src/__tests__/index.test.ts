@@ -13,7 +13,12 @@ vi.mock('../svg/render-mosaic', () => ({
   renderMosaic: vi.fn(),
 }));
 
+vi.mock('../scheduled/run-scheduled-refresh', () => ({
+  runScheduledRefresh: vi.fn(),
+}));
+
 import { getDependents } from '../cache/get-dependents';
+import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
 import { renderMosaic } from '../svg/render-mosaic';
 import worker from '../index';
@@ -23,6 +28,53 @@ afterEach(() => {
 });
 
 describe('worker', () => {
+  describe('scheduled', () => {
+    it('calls runScheduledRefresh with env', async () => {
+      vi.mocked(runScheduledRefresh).mockResolvedValue({
+        keysScanned: 0,
+        refreshed: 0,
+        skipped: 0,
+        errors: 0,
+        abortedDueToRateLimit: false,
+      });
+      const env = createEnv();
+      const ctx = createCtx();
+
+      await worker.scheduled!(
+        { cron: '0 4 * * *', scheduledTime: Date.now() } as ScheduledEvent,
+        env,
+        ctx
+      );
+
+      expect(runScheduledRefresh).toHaveBeenCalledWith(env);
+      expect(ctx.waitUntil).toHaveBeenCalled();
+    });
+
+    it('catches errors from runScheduledRefresh', async () => {
+      vi.mocked(runScheduledRefresh).mockRejectedValue(new Error('KV failure'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const ctx = createCtx();
+
+      await worker.scheduled!(
+        { cron: '0 4 * * *', scheduledTime: Date.now() } as ScheduledEvent,
+        createEnv(),
+        ctx
+      );
+
+      // Wait for the promise passed to waitUntil to settle
+      const waitUntilPromise = vi.mocked(ctx.waitUntil).mock.calls[0]![0];
+      await waitUntilPromise;
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[scheduled] Refresh failed:',
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('GET /', () => {
     it('returns 200 health check', async () => {
       const response = await worker.fetch(
