@@ -11,8 +11,7 @@ const examples = [
 export default function Home() {
   return (
     <div className="max-w-page mx-auto px-6 font-sans">
-      {/* Hero */}
-      <section className="pt-[140px] pb-section text-center max-sm:pt-20 max-sm:pb-20">
+      <section className="pt-35 pb-section text-center max-sm:pt-20 max-sm:pb-20">
         <h1 className="text-[3.5rem] font-bold tracking-[-0.03em] leading-[1.1] mb-4 max-sm:text-[2.5rem]">
           usedby.dev
         </h1>
@@ -28,9 +27,8 @@ export default function Home() {
         />
       </section>
 
-      {/* How it works */}
       <section className="py-section border-t border-border max-sm:py-20">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-fg-muted mb-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-fg-muted mb-6">
           How it works
         </p>
         <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl overflow-x-auto mb-5 max-sm:text-[0.8125rem] max-sm:p-5">
@@ -47,9 +45,8 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Examples */}
       <section className="py-section border-t border-border max-sm:py-20">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-fg-muted mb-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-fg-muted mb-6">
           Examples
         </p>
         <div className="flex flex-col gap-16 max-sm:gap-12">
@@ -69,7 +66,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-section border-t border-border text-center max-sm:py-20">
         <h2 className="text-[2rem] font-bold tracking-[-0.03em] leading-[1.2] mb-4 max-sm:text-[1.5rem]">
           Try it with your library
@@ -79,7 +75,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Footer */}
       <footer className="py-12 border-t border-border text-center">
         <a
           className="text-sm text-fg-muted hover:text-fg"

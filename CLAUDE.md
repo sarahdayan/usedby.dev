@@ -2,7 +2,7 @@
 
 ## Project
 
-UsedBy.dev — a hosted service that lets open-source maintainers showcase which projects depend on their library via a zero-config embeddable image.
+usedby.dev — a hosted service that lets open-source maintainers showcase which projects depend on their library via a zero-config embeddable image.
 
 ## Tech stack
 
