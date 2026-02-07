@@ -22,16 +22,13 @@ export const metadata: Metadata = {
     'An embeddable image that showcases which projects depend on your open-source library. No API keys, no build step, no configuration.',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
-      <body>
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={`${spaceGrotesk.variable} ${spaceMono.variable}`}
+    >
+      <body>{children}</body>
     </html>
   );
 }
