@@ -1,13 +1,34 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
+import { sleep } from '../rate-limit';
 import { searchDependents } from '../search-dependents';
+
+vi.mock('../rate-limit', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../rate-limit')>();
+
+  return {
+    ...actual,
+    sleep: vi.fn(),
+  };
+});
 
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.clearAllMocks();
+});
 afterAll(() => server.close());
 
 describe('searchDependents', () => {
@@ -23,9 +44,11 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
-    expect(results).toEqual([
+    expect(results.repos).toEqual([
       {
         owner: 'acme',
         name: 'app',
@@ -45,6 +68,9 @@ describe('searchDependents', () => {
         isFork: false,
       },
     ]);
+    expect(results.partial).toBe(false);
+    expect(results.rateLimited).toBe(false);
+    expect(results.capped).toBe(false);
   });
 
   it('paginates through multiple pages', async () => {
@@ -59,31 +85,63 @@ describe('searchDependents', () => {
         if (page === 1) {
           return HttpResponse.json(
             createSearchResponse(
-              [createSearchItem({ fullName: 'acme/app' })],
-              2
-            ),
-            {
-              headers: {
-                link: '<https://api.github.com/search/code?q=my-package+filename:package.json&per_page=100&page=2>; rel="next", <https://api.github.com/search/code?q=my-package+filename:package.json&per_page=100&page=2>; rel="last"',
-              },
-            }
+              Array.from({ length: 100 }, (_, i) =>
+                createSearchItem({ fullName: `org/repo-${i}` })
+              ),
+              200
+            )
           );
         }
 
         return HttpResponse.json(
           createSearchResponse(
             [createSearchItem({ fullName: 'corp/lib' })],
-            2
+            200
           )
         );
       })
     );
 
-    const results = await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
     expect(requestCount).toBe(2);
-    expect(results).toHaveLength(2);
-    expect(results.map((r) => r.fullName)).toEqual(['acme/app', 'corp/lib']);
+    expect(results.repos).toHaveLength(101);
+    expect(results.partial).toBe(false);
+    expect(results.capped).toBe(false);
+  });
+
+  it('sleeps between pages for pacing', async () => {
+    server.use(
+      http.get('https://api.github.com/search/code', ({ request }) => {
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') ?? '1');
+
+        if (page === 1) {
+          return HttpResponse.json(
+            createSearchResponse(
+              Array.from({ length: 100 }, (_, i) =>
+                createSearchItem({ fullName: `org/repo-${i}` })
+              ),
+              200
+            )
+          );
+        }
+
+        return HttpResponse.json(
+          createSearchResponse(
+            [createSearchItem({ fullName: 'corp/lib' })],
+            200
+          )
+        );
+      })
+    );
+
+    await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(6_500);
   });
 
   it('deduplicates repos with multiple package.json matches', async () => {
@@ -100,10 +158,12 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
-    expect(results).toHaveLength(2);
-    expect(results.map((r) => r.fullName)).toEqual([
+    expect(results.repos).toHaveLength(2);
+    expect(results.repos.map((r) => r.fullName)).toEqual([
       'acme/monorepo',
       'corp/app',
     ]);
@@ -116,9 +176,12 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
-    expect(results).toEqual([]);
+    expect(results.repos).toEqual([]);
+    expect(results.partial).toBe(false);
   });
 
   it('throws on API error', async () => {
@@ -153,9 +216,11 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
-    expect(results[0]).toEqual({
+    expect(results.repos[0]).toEqual({
       owner: 'acme',
       name: 'app',
       fullName: 'acme/app',
@@ -164,6 +229,248 @@ describe('searchDependents', () => {
       avatarUrl: 'https://avatars.githubusercontent.com/u/42',
       isFork: true,
     });
+  });
+
+  it('retries on rate limit and succeeds', async () => {
+    let callCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        callCount++;
+
+        if (callCount === 1) {
+          return HttpResponse.json(
+            { message: 'rate limit exceeded' },
+            {
+              status: 403,
+              headers: {
+                'x-ratelimit-remaining': '0',
+                'x-ratelimit-reset': '1700000000',
+              },
+            }
+          );
+        }
+
+        return HttpResponse.json(
+          createSearchResponse([
+            createSearchItem({ fullName: 'acme/app', stars: 100 }),
+          ])
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(callCount).toBe(2);
+    expect(results.repos).toHaveLength(1);
+    expect(results.partial).toBe(false);
+  });
+
+  it('retries on secondary rate limit (retry-after) and succeeds', async () => {
+    let callCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        callCount++;
+
+        if (callCount === 1) {
+          return HttpResponse.json(
+            { message: 'secondary rate limit' },
+            {
+              status: 403,
+              headers: { 'retry-after': '30' },
+            }
+          );
+        }
+
+        return HttpResponse.json(
+          createSearchResponse([
+            createSearchItem({ fullName: 'acme/app', stars: 100 }),
+          ])
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(callCount).toBe(2);
+    expect(results.repos).toHaveLength(1);
+    expect(results.partial).toBe(false);
+  });
+
+  it('returns partial results when retries are exhausted', async () => {
+    let callCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', ({ request }) => {
+        callCount++;
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') ?? '1');
+
+        if (page === 1 && callCount === 1) {
+          return HttpResponse.json(
+            createSearchResponse(
+              Array.from({ length: 100 }, (_, i) =>
+                createSearchItem({ fullName: `org/repo-${i}` })
+              ),
+              1000
+            )
+          );
+        }
+
+        // All attempts for page 2 fail with rate limit
+        return HttpResponse.json(
+          { message: 'rate limit exceeded' },
+          {
+            status: 403,
+            headers: { 'x-ratelimit-remaining': '0' },
+          }
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(results.repos).toHaveLength(100);
+    expect(results.partial).toBe(true);
+    expect(results.rateLimited).toBe(true);
+  });
+
+  it('returns partial results with zero repos when rate limited on first page', async () => {
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        return HttpResponse.json(
+          { message: 'rate limit exceeded' },
+          {
+            status: 403,
+            headers: { 'x-ratelimit-remaining': '0' },
+          }
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(results.repos).toEqual([]);
+    expect(results.partial).toBe(true);
+    expect(results.rateLimited).toBe(true);
+  });
+
+  it('stops at 10 pages and sets capped to true', async () => {
+    let requestCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        requestCount++;
+
+        return HttpResponse.json(
+          createSearchResponse(
+            Array.from({ length: 100 }, (_, i) =>
+              createSearchItem({
+                fullName: `org/repo-${requestCount}-${i}`,
+              })
+            ),
+            5000
+          )
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(requestCount).toBe(10);
+    expect(results.repos).toHaveLength(1000);
+    expect(results.partial).toBe(false);
+    expect(results.capped).toBe(true);
+  });
+
+  it('does not sleep after the last page', async () => {
+    let requestCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        requestCount++;
+
+        return HttpResponse.json(
+          createSearchResponse(
+            Array.from({ length: 100 }, (_, i) =>
+              createSearchItem({
+                fullName: `org/repo-${requestCount}-${i}`,
+              })
+            ),
+            5000
+          )
+        );
+      })
+    );
+
+    await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+
+    // 10 pages, but sleep only between pages (9 times, not after page 10)
+    expect(sleep).toHaveBeenCalledTimes(9);
+  });
+
+  it('stops early when fewer results than per_page', async () => {
+    let requestCount = 0;
+
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        requestCount++;
+
+        return HttpResponse.json(
+          createSearchResponse([
+            createSearchItem({ fullName: `org/repo-${requestCount}` }),
+          ])
+        );
+      })
+    );
+
+    const results = await searchDependents('my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(requestCount).toBe(1);
+    expect(results.repos).toHaveLength(1);
+  });
+
+  it('re-throws non-rate-limit errors', async () => {
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        return HttpResponse.json(
+          { message: 'Internal Server Error' },
+          { status: 500 }
+        );
+      })
+    );
+
+    await expect(
+      searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' })
+    ).rejects.toThrow();
+  });
+
+  it('re-throws 403 without rate limit headers', async () => {
+    server.use(
+      http.get('https://api.github.com/search/code', () => {
+        return HttpResponse.json(
+          { message: 'Resource not accessible by integration' },
+          { status: 403 }
+        );
+      })
+    );
+
+    await expect(
+      searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' })
+    ).rejects.toThrow();
   });
 });
 

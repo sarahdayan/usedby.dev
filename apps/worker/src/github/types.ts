@@ -7,3 +7,10 @@ export interface DependentRepo {
   avatarUrl: string;
   isFork: boolean;
 }
+
+export interface SearchResult {
+  repos: DependentRepo[];
+  partial: boolean;
+  rateLimited: boolean;
+  capped: boolean;
+}

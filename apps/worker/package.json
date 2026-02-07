@@ -19,6 +19,7 @@
     "wrangler": "^4.14.0"
   },
   "dependencies": {
+    "@octokit/request-error": "^7.1.0",
     "@octokit/rest": "^22.0.1"
   }
 }
