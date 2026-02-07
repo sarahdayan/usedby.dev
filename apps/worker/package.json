@@ -14,7 +14,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250124.0",
     "@usedby.dev/typescript-config": "*",
+    "msw": "^2.12.9",
     "typescript": "5.9.2",
     "wrangler": "^4.14.0"
+  },
+  "dependencies": {
+    "@octokit/rest": "^22.0.1"
   }
 }
