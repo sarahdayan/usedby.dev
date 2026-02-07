@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "oxlint --deny-warnings && eslint --max-warnings 0",
@@ -16,12 +16,15 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@usedby.dev/eslint-config": "*",
-    "@usedby.dev/typescript-config": "*",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "@usedby.dev/eslint-config": "*",
+    "@usedby.dev/typescript-config": "*",
     "eslint": "^9.39.1",
+    "lightningcss": "^1.30.2",
+    "tailwindcss": "^4.1.18",
     "typescript": "5.9.2"
   }
 }

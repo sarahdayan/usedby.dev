@@ -1,10 +1,18 @@
-:root {
+@import "tailwindcss";
+
+@theme {
   --color-bg: #ffffff;
   --color-fg: #111111;
   --color-fg-muted: #666666;
   --color-border: #e5e5e5;
   --color-code-bg: #1a1a1a;
-  --max-width: 720px;
+  --color-code-fg: #e5e5e5;
+  --color-code-url: #7dd3fc;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-space-mono), ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --max-width-page: 720px;
   --spacing-section: 120px;
 }
 
@@ -18,34 +26,28 @@
   }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  body {
+    color: var(--color-fg);
+    background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  color: var(--color-fg);
-  background: var(--color-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
 }

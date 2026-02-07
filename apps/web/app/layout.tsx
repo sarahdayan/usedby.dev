@@ -1,24 +1,24 @@
-import type { Metadata } from "next";
-import { Space_Grotesk, Space_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Space_Grotesk, Space_Mono } from 'next/font/google';
+import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
 });
 
 const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-mono",
-  display: "swap",
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-space-mono',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "UsedBy.dev — Showcase your library's dependents",
+  title: "usedby.dev — Showcase your library's dependents",
   description:
-    "An embeddable image that showcases which projects depend on your open-source library. No API keys, no build step, no configuration.",
+    'An embeddable image that showcases which projects depend on your open-source library. No API keys, no build step, no configuration.',
 };
 
 export default function RootLayout({
