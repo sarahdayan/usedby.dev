@@ -1,0 +1,132 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { DependentRepo, EnrichResult, SearchResult } from '../types';
+
+vi.mock('../search-dependents', () => ({
+  searchDependents: vi.fn(),
+}));
+
+vi.mock('../enrich-repos', () => ({
+  enrichRepos: vi.fn(),
+}));
+
+import { enrichRepos } from '../enrich-repos';
+import { refreshDependents } from '../pipeline';
+import { searchDependents } from '../search-dependents';
+
+const NOW = new Date('2025-01-15T12:00:00Z');
+const ENV = { GITHUB_TOKEN: 'fake-token' };
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('refreshDependents', () => {
+  it('filters and scores enriched repos', async () => {
+    const enrichedRepos: DependentRepo[] = [
+      createRepo({ name: 'popular', stars: 1000 }),
+      createRepo({ name: 'fork', stars: 500, isFork: true }),
+      createRepo({ name: 'archived', stars: 500, archived: true }),
+      createRepo({ name: 'low-stars', stars: 2 }),
+      createRepo({ name: 'less-popular', stars: 100 }),
+    ];
+
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    } satisfies SearchResult);
+
+    vi.mocked(enrichRepos).mockResolvedValue({
+      repos: enrichedRepos,
+      rateLimited: false,
+    } satisfies EnrichResult);
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(searchDependents).toHaveBeenCalledWith('react', ENV);
+    expect(enrichRepos).toHaveBeenCalledWith([], ENV);
+
+    // filterDependents removes fork, archived, and low-stars
+    expect(result.repos).toHaveLength(2);
+    expect(result.repos.map((r) => r.name)).toEqual([
+      'popular',
+      'less-popular',
+    ]);
+
+    // scoreDependents assigns scores and sorts descending
+    expect(result.repos[0]!.score).toBeGreaterThan(result.repos[1]!.score);
+    expect(result.repos[0]!.score).toBe(1000); // pushed at NOW → multiplier 1.0
+  });
+
+  it('returns correct CacheEntry shape', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result).toEqual({
+      repos: [],
+      fetchedAt: NOW.toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: false,
+    });
+  });
+
+  it('sets partial to true when search is rate-limited', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: true,
+      rateLimited: true,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result.partial).toBe(true);
+  });
+
+  it('sets partial to true when enrich is rate-limited', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: true });
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result.partial).toBe(true);
+  });
+
+  it('propagates errors from pipeline stages', async () => {
+    vi.mocked(searchDependents).mockRejectedValue(new Error('API error'));
+
+    await expect(refreshDependents('react', ENV, NOW)).rejects.toThrow(
+      'API error'
+    );
+  });
+});
+
+function createRepo(
+  overrides: Partial<DependentRepo> & { name: string }
+): DependentRepo {
+  return {
+    owner: 'test',
+    fullName: `test/${overrides.name}`,
+    stars: 100,
+    lastPush: NOW.toISOString(),
+    avatarUrl: 'https://example.com/avatar.png',
+    isFork: false,
+    archived: false,
+    ...overrides,
+  };
+}
