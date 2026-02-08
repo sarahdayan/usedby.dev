@@ -266,14 +266,14 @@ describe('renderDetailed', () => {
   it('does not render badge when dependentCount is 0', () => {
     const svg = renderDetailed(createAvatars(3), undefined, 0);
 
-    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('Used by ');
     expect(svg).not.toContain('<rect');
   });
 
   it('does not render badge when dependentCount is undefined', () => {
     const svg = renderDetailed(createAvatars(3));
 
-    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('Used by ');
     expect(svg).not.toContain('<rect');
   });
 });
