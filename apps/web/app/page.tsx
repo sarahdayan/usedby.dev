@@ -37,7 +37,7 @@ export default function Home() {
           <code>
             {'<img src="'}
             <span className="text-code-url">
-              https://usedby.dev/facebook/react
+              https://api.usedby.dev/facebook/react
             </span>
             {'" alt="Dependents" />'}
           </code>

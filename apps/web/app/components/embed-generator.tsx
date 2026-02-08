@@ -29,7 +29,7 @@ export function EmbedGenerator() {
   const displayPath = generated || 'owner/repo';
   const displayMax = generated ? generatedMax : DEFAULT_MAX;
   const query = displayMax !== DEFAULT_MAX ? `?max=${displayMax}` : '';
-  const imageUrl = `https://usedby.dev/${displayPath}${query}`;
+  const imageUrl = `https://api.usedby.dev/${displayPath}${query}`;
   const markdownSnippet = `![Used by](${imageUrl})`;
   const htmlSnippet = `<img src="${imageUrl}" alt="Used by" />`;
 
