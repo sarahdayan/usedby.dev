@@ -1,6 +1,9 @@
+import type { Theme } from './theme';
+
 export interface RenderOptions {
   max?: number;
   style?: 'mosaic' | 'detailed';
+  theme?: Theme;
 }
 
 export interface LayoutConfig {

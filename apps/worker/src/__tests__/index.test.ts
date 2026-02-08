@@ -302,7 +302,10 @@ describe('worker', () => {
         expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
         expect(response.headers.get('Cache-Control')).toBe('no-store');
         expect(await response.text()).toContain('Something went wrong');
-        expect(renderMessage).toHaveBeenCalledWith('Something went wrong');
+        expect(renderMessage).toHaveBeenCalledWith(
+          'Something went wrong',
+          undefined
+        );
       } finally {
         consoleSpy.mockRestore();
       }
@@ -331,7 +334,35 @@ describe('worker', () => {
 
         expect(response.status).toBe(500);
         expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
-        expect(renderMessage).toHaveBeenCalledWith('Something went wrong');
+        expect(renderMessage).toHaveBeenCalledWith(
+          'Something went wrong',
+          undefined
+        );
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it('passes theme to renderMessage on error', async () => {
+      vi.mocked(getDependents).mockRejectedValue(new Error('API failure'));
+      vi.mocked(renderMessage).mockReturnValue(
+        '<svg xmlns="http://www.w3.org/2000/svg">Something went wrong</svg>'
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      try {
+        await worker.fetch(
+          createRequest('/npm/react?theme=dark'),
+          createEnv(),
+          createCtx()
+        );
+
+        expect(renderMessage).toHaveBeenCalledWith(
+          'Something went wrong',
+          'dark'
+        );
       } finally {
         consoleSpy.mockRestore();
       }
@@ -517,6 +548,59 @@ describe('worker', () => {
         expect.objectContaining({ name: 'first' }),
         expect.objectContaining({ name: 'second' }),
       ]);
+    });
+  });
+
+  describe('theme validation', () => {
+    it('returns 400 for invalid theme value', async () => {
+      const response = await worker.fetch(
+        createRequest('/npm/react?theme=invalid'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.text()).toBe('Invalid theme parameter');
+      expect(getDependents).not.toHaveBeenCalled();
+    });
+
+    it('passes theme=dark to renderMosaic', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      const response = await worker.fetch(
+        createRequest('/npm/react?theme=dark'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ theme: 'dark' })
+      );
+    });
+
+    it('passes undefined theme when param is absent', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
+
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ theme: undefined })
+      );
     });
   });
 

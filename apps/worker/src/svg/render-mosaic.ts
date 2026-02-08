@@ -18,11 +18,11 @@ export function renderMosaic(
   const sliced = avatars.slice(0, max);
 
   if (sliced.length === 0) {
-    return renderMessage('No dependents found');
+    return renderMessage('No dependents found', options?.theme);
   }
 
   if (options?.style === 'detailed') {
-    return renderDetailed(sliced);
+    return renderDetailed(sliced, options?.theme);
   }
 
   const layout = computeLayout(sliced.length);

@@ -6,7 +6,12 @@ vi.mock('../render-detailed', () => ({
   renderDetailed: vi.fn(() => '<svg>detailed</svg>'),
 }));
 
+vi.mock('../render-message', () => ({
+  renderMessage: vi.fn(() => '<svg>message</svg>'),
+}));
+
 import { renderDetailed } from '../render-detailed';
+import { renderMessage } from '../render-message';
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -102,10 +107,11 @@ describe('renderMosaic', () => {
   it('returns message SVG for empty input', () => {
     const svg = renderMosaic([]);
 
-    expect(svg).toContain('width="300"');
-    expect(svg).toContain('height="40"');
-    expect(svg).toContain('No dependents found');
-    expect(svg).not.toContain('<image');
+    expect(renderMessage).toHaveBeenCalledWith(
+      'No dependents found',
+      undefined
+    );
+    expect(svg).toBe('<svg>message</svg>');
   });
 
   it('renders the correct number of images', () => {
@@ -166,7 +172,7 @@ describe('renderMosaic', () => {
     const avatars = createAvatars(5);
     const svg = renderMosaic(avatars, { style: 'detailed' });
 
-    expect(renderDetailed).toHaveBeenCalledWith(avatars);
+    expect(renderDetailed).toHaveBeenCalledWith(avatars, undefined);
     expect(svg).toBe('<svg>detailed</svg>');
   });
 
@@ -195,9 +201,25 @@ describe('renderMosaic', () => {
   });
 
   it('returns message for empty input even with detailed style', () => {
-    const svg = renderMosaic([], { style: 'detailed' });
+    renderMosaic([], { style: 'detailed' });
 
-    expect(svg).toContain('No dependents found');
+    expect(renderMessage).toHaveBeenCalledWith(
+      'No dependents found',
+      undefined
+    );
     expect(renderDetailed).not.toHaveBeenCalled();
+  });
+
+  it('passes theme to renderDetailed', () => {
+    const avatars = createAvatars(5);
+    renderMosaic(avatars, { style: 'detailed', theme: 'dark' });
+
+    expect(renderDetailed).toHaveBeenCalledWith(avatars, 'dark');
+  });
+
+  it('passes theme to renderMessage for empty input', () => {
+    renderMosaic([], { theme: 'dark' });
+
+    expect(renderMessage).toHaveBeenCalledWith('No dependents found', 'dark');
   });
 });

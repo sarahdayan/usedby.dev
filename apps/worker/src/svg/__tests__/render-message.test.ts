@@ -46,7 +46,15 @@ describe('renderMessage', () => {
 
     expect(svg).toContain('text-anchor="middle"');
     expect(svg).toContain('x="150"');
-    expect(svg).toContain('fill="#666"');
+    expect(svg).toContain('class="text-secondary"');
+    expect(svg).not.toContain('fill="#666"');
     expect(svg).toContain('font-size="14"');
+  });
+
+  it('includes a style block', () => {
+    const svg = renderMessage('Test');
+
+    expect(svg).toContain('<style>');
+    expect(svg).toContain('</style>');
   });
 });

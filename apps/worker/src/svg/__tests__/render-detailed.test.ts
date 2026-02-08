@@ -191,6 +191,22 @@ describe('renderDetailed', () => {
     expect(svg).toContain('org/repo</text>');
   });
 
+  it('uses CSS classes for text colors', () => {
+    const svg = renderDetailed(createAvatars(1));
+
+    expect(svg).toContain('class="text-primary"');
+    expect(svg).toContain('class="text-secondary"');
+    expect(svg).not.toContain('fill="#333"');
+    expect(svg).not.toContain('fill="#666"');
+  });
+
+  it('includes a style block', () => {
+    const svg = renderDetailed(createAvatars(1));
+
+    expect(svg).toContain('<style>');
+    expect(svg).toContain('</style>');
+  });
+
   it('renders a single avatar correctly', () => {
     const svg = renderDetailed(createAvatars(1));
 

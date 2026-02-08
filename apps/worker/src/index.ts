@@ -6,6 +6,7 @@ import { DEFAULT_MAX } from './svg/constants';
 import { fetchAvatars } from './svg/fetch-avatars';
 import { renderMessage } from './svg/render-message';
 import { renderMosaic } from './svg/render-mosaic';
+import type { Theme } from './svg/theme';
 
 interface Env {
   DEPENDENTS_CACHE: KVNamespace;
@@ -112,6 +113,24 @@ export default {
       sort = sortParam;
     }
 
+    const themeParam = url.searchParams.get('theme');
+    let theme: Theme | undefined;
+
+    if (themeParam !== null) {
+      if (
+        themeParam !== 'light' &&
+        themeParam !== 'dark' &&
+        themeParam !== 'auto'
+      ) {
+        return new Response('Invalid theme parameter', {
+          status: 400,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+
+      theme = themeParam;
+    }
+
     const isDev = env.DEV === 'true';
     const logger = new DevLogger(isDev);
     const limits = getLimits(isDev);
@@ -138,7 +157,7 @@ export default {
       logger.timeEnd('avatars');
       logger.log('avatars', `${avatars.length} fetched`);
 
-      const svg = renderMosaic(avatars, { style });
+      const svg = renderMosaic(avatars, { style, theme });
 
       logger.timeEnd('total');
       logger.summary();
@@ -155,7 +174,7 @@ export default {
       logger.timeEnd('total');
       logger.summary();
 
-      return new Response(renderMessage('Something went wrong'), {
+      return new Response(renderMessage('Something went wrong', theme), {
         status: 500,
         headers: {
           'Content-Type': 'image/svg+xml',

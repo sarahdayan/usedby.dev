@@ -9,6 +9,8 @@ import {
   DETAILED_TEXT_GAP,
 } from './constants';
 import { escapeXml } from './avatar';
+import type { Theme } from './theme';
+import { renderThemeStyle } from './theme';
 import type { AvatarData } from './types';
 
 export function formatStars(n: number): string {
@@ -40,7 +42,7 @@ export function truncateName(name: string): string {
   return `${name.slice(0, DETAILED_NAME_MAX_CHARS - 1)}…`;
 }
 
-export function renderDetailed(avatars: AvatarData[]): string {
+export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
   if (avatars.length === 0) {
     return '';
   }
@@ -84,9 +86,9 @@ export function renderDetailed(avatars: AvatarData[]): string {
       [
         `<a href="${href}">`,
         `<image href="${escapeXml(avatar.dataUri)}" x="${imgX}" y="${imgY}" width="${DETAILED_AVATAR_SIZE}" height="${DETAILED_AVATAR_SIZE}" clip-path="url(#${clipId})"/>`,
-        `<text x="${textX}" y="${y + 21}" fill="#333" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600">`,
+        `<text x="${textX}" y="${y + 21}" class="text-primary" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600">`,
         `${escapedName}</text>`,
-        `<text x="${textX}" y="${y + 37}" fill="#666" font-family="system-ui, -apple-system, sans-serif" font-size="11">`,
+        `<text x="${textX}" y="${y + 37}" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="11">`,
         `${starsText}</text>`,
         `</a>`,
       ].join('')
@@ -95,6 +97,7 @@ export function renderDetailed(avatars: AvatarData[]): string {
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Dependents">`,
+    renderThemeStyle(theme),
     `<defs>${defs.join('')}</defs>`,
     bodies.join(''),
     '</svg>',

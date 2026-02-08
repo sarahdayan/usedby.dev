@@ -47,6 +47,7 @@ Example: `GET /npm/dinero.js` returns an SVG image.
 | `max`     | integer | `35`     | Maximum number of dependents to display (1–100).                                                                                                               |
 | `style`   | string  | `mosaic` | Rendering style. `mosaic` shows an avatar-only grid (7 columns, 64px avatars). `detailed` shows a 4-column card layout with avatar, repo name, and star count. |
 | `sort`    | string  | `score`  | Sort order. `score` ranks by `stars × recency_multiplier` (composite score). `stars` ranks by raw star count.                                                  |
+| `theme`   | string  | `auto`   | Color theme. `auto` adapts to the user's system preference via `prefers-color-scheme`. `light` and `dark` force a specific mode.                               |
 
 ## Development
 
