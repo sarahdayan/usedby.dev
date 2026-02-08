@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe('refreshDependents', () => {
-  it('filters forks and low-stars before enrichment, then filters archived after', async () => {
+  it('filters forks before enrichment, then filters archived and low-stars after', async () => {
     const searchRepos: DependentRepo[] = [
       createRepo({ name: 'popular', stars: 1000 }),
       createRepo({ name: 'fork', stars: 500, isFork: true }),
@@ -50,15 +50,16 @@ describe('refreshDependents', () => {
 
     expect(searchDependents).toHaveBeenCalledWith('react', ENV);
 
-    // enrichRepos should only receive pre-filtered repos (no fork, no low-stars)
+    // enrichRepos receives all non-fork repos (star filter deferred to post-enrichment)
     const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![0];
     expect(enrichedRepos.map((r) => r.name)).toEqual([
       'popular',
       'archived',
+      'low-stars',
       'less-popular',
     ]);
 
-    // Final result excludes archived (filtered post-enrichment)
+    // Final result excludes archived and low-stars (filtered post-enrichment)
     expect(result.repos).toHaveLength(2);
     expect(result.repos.map((r) => r.name)).toEqual([
       'popular',
