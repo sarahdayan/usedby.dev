@@ -9,7 +9,8 @@ interface Env {
   GITHUB_TOKEN: string;
 }
 
-const VALID_SEGMENT = /^[a-zA-Z0-9._-]+$/;
+const SUPPORTED_PLATFORMS = ['npm'] as const;
+const NPM_PACKAGE_NAME = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
 
 export default {
   async scheduled(event, env, ctx) {
@@ -41,11 +42,11 @@ export default {
     }
 
     const segments = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
+    const platform = segments[0];
 
     if (
-      segments.length !== 2 ||
-      !VALID_SEGMENT.test(segments[0]!) ||
-      !VALID_SEGMENT.test(segments[1]!)
+      !platform ||
+      !SUPPORTED_PLATFORMS.includes(platform as (typeof SUPPORTED_PLATFORMS)[number])
     ) {
       return new Response('Not found', {
         status: 404,
@@ -53,7 +54,14 @@ export default {
       });
     }
 
-    const packageName = `${segments[0]}/${segments[1]}`;
+    const packageName = segments.slice(1).join('/');
+
+    if (!NPM_PACKAGE_NAME.test(packageName)) {
+      return new Response('Not found', {
+        status: 404,
+        headers: { 'content-type': 'text/plain' },
+      });
+    }
     const maxParam = url.searchParams.get('max');
     let max: number | undefined;
 

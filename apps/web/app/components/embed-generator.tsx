@@ -2,13 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 
-const VALID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]*\/[\w.-]+$/;
-const GITHUB_PREFIX = /^https?:\/\/github\.com\//;
+const VALID_PATTERN = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
 const DEFAULT_MAX = 35;
 const MAX_AVATARS = 100;
 
 function normalize(value: string) {
-  return value.replace(GITHUB_PREFIX, '').replace(/\/+$/, '');
+  return value.trim();
 }
 
 export function EmbedGenerator() {
@@ -26,7 +25,7 @@ export function EmbedGenerator() {
   const normalized = normalize(input);
   const isValid = VALID_PATTERN.test(normalized);
   const showHint = input.length > 0 && !isValid;
-  const displayPath = generated || 'owner/repo';
+  const displayPath = generated ? `npm/${generated}` : 'npm/package';
   const displayMax = generated ? generatedMax : DEFAULT_MAX;
   const query = displayMax !== DEFAULT_MAX ? `?max=${displayMax}` : '';
   const imageUrl = `https://api.usedby.dev/${displayPath}${query}`;
@@ -85,8 +84,8 @@ export function EmbedGenerator() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="owner/repo"
-          aria-label="Repository (owner/repo)"
+          placeholder="react"
+          aria-label="npm package name"
           className="flex-1 bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl outline-none placeholder:text-fg-muted max-sm:text-[0.8125rem] max-sm:p-5"
         />
         <label className="flex items-center gap-2 bg-code-bg text-code-fg font-mono text-[0.9375rem] px-7 rounded-xl max-sm:text-[0.8125rem] max-sm:px-5">
@@ -113,7 +112,7 @@ export function EmbedGenerator() {
       <p
         className={`text-sm text-fg-muted mb-3 ${showHint ? 'visible' : 'invisible'}`}
       >
-        Enter a repository as owner/repo
+        Enter a valid npm package name
       </p>
       <div
         className={`flex flex-col gap-5${generated ? '' : ' opacity-50'}`}

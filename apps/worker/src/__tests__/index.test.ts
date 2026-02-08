@@ -96,7 +96,7 @@ describe('worker', () => {
     });
   });
 
-  describe('GET /:owner/:repo', () => {
+  describe('GET /:platform/:package', () => {
     it('returns 200 with SVG content type and body', async () => {
       const repos = [createScoredRepo('app')];
       vi.mocked(getDependents).mockResolvedValue({
@@ -110,7 +110,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg>mosaic</svg>');
 
       const response = await worker.fetch(
-        createRequest('/facebook/react'),
+        createRequest('/npm/react'),
         createEnv(),
         createCtx()
       );
@@ -130,7 +130,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       await worker.fetch(
-        createRequest('/facebook/react?max=10'),
+        createRequest('/npm/react?max=10'),
         createEnv(),
         createCtx()
       );
@@ -148,7 +148,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       await worker.fetch(
-        createRequest('/facebook/react'),
+        createRequest('/npm/react'),
         createEnv(),
         createCtx()
       );
@@ -166,7 +166,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       const response = await worker.fetch(
-        createRequest('/facebook/react'),
+        createRequest('/npm/react'),
         createEnv(),
         createCtx()
       );
@@ -188,7 +188,7 @@ describe('worker', () => {
       );
 
       const response = await worker.fetch(
-        createRequest('/facebook/react'),
+        createRequest('/npm/react'),
         createEnv(),
         createCtx()
       );
@@ -209,11 +209,33 @@ describe('worker', () => {
       vi.mocked(fetchAvatars).mockResolvedValue([]);
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
-      await worker.fetch(createRequest('/facebook/react'), env, ctx);
+      await worker.fetch(createRequest('/npm/react'), env, ctx);
 
       expect(getDependents).toHaveBeenCalledWith({
         platform: 'npm',
-        packageName: 'facebook/react',
+        packageName: 'react',
+        kv: env.DEPENDENTS_CACHE,
+        env: { GITHUB_TOKEN: 'fake-token' },
+        waitUntil: expect.any(Function),
+      });
+    });
+
+    it('calls getDependents with scoped package name', async () => {
+      const env = createEnv();
+      const ctx = createCtx();
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/@babel/core'), env, ctx);
+
+      expect(getDependents).toHaveBeenCalledWith({
+        platform: 'npm',
+        packageName: '@babel/core',
         kv: env.DEPENDENTS_CACHE,
         env: { GITHUB_TOKEN: 'fake-token' },
         waitUntil: expect.any(Function),
@@ -231,7 +253,7 @@ describe('worker', () => {
 
       try {
         const response = await worker.fetch(
-          createRequest('/facebook/react'),
+          createRequest('/npm/react'),
           createEnv(),
           createCtx()
         );
@@ -262,7 +284,7 @@ describe('worker', () => {
 
       try {
         const response = await worker.fetch(
-          createRequest('/facebook/react'),
+          createRequest('/npm/react'),
           createEnv(),
           createCtx()
         );
@@ -281,7 +303,7 @@ describe('worker', () => {
       'returns 400 for invalid max=%s',
       async (max) => {
         const response = await worker.fetch(
-          createRequest(`/facebook/react?max=${max}`),
+          createRequest(`/npm/react?max=${max}`),
           createEnv(),
           createCtx()
         );
@@ -296,7 +318,7 @@ describe('worker', () => {
   describe('method restriction', () => {
     it('returns 405 for POST', async () => {
       const response = await worker.fetch(
-        createRequest('/facebook/react', 'POST'),
+        createRequest('/npm/react', 'POST'),
         createEnv(),
         createCtx()
       );
@@ -315,7 +337,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       const response = await worker.fetch(
-        createRequest('/facebook/react', 'HEAD'),
+        createRequest('/npm/react', 'HEAD'),
         createEnv(),
         createCtx()
       );
@@ -337,9 +359,20 @@ describe('worker', () => {
       expect(getDependents).not.toHaveBeenCalled();
     });
 
-    it('returns 404 for three segments', async () => {
+    it('returns 404 for unknown platform', async () => {
       const response = await worker.fetch(
-        createRequest('/a/b/c'),
+        createRequest('/pypi/react'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(404);
+      expect(getDependents).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 for missing package name', async () => {
+      const response = await worker.fetch(
+        createRequest('/npm/'),
         createEnv(),
         createCtx()
       );
@@ -358,7 +391,7 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       const response = await worker.fetch(
-        createRequest('/facebook/react/'),
+        createRequest('/npm/react/'),
         createEnv(),
         createCtx()
       );
@@ -366,9 +399,9 @@ describe('worker', () => {
       expect(response.status).toBe(200);
     });
 
-    it('returns 404 for invalid segment characters', async () => {
+    it('returns 404 for invalid package name characters', async () => {
       const response = await worker.fetch(
-        createRequest('/foo%00bar/baz'),
+        createRequest('/npm/foo%00bar'),
         createEnv(),
         createCtx()
       );
