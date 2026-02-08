@@ -13,7 +13,7 @@ export default function Home() {
         <p className="text-xs font-bold uppercase tracking-widest text-fg-muted mb-6">
           How it works
         </p>
-        <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl overflow-x-auto mb-5 max-sm:text-[0.8125rem] max-sm:p-5">
+        <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-8 px-7 py-6 rounded-xl overflow-x-auto mb-5 max-sm:text-[0.8125rem] max-sm:p-5">
           <code>
             <span className="code-tag">{'<a'}</span>{' '}
             <span className="code-attr">href</span>

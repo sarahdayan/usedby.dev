@@ -6,135 +6,92 @@ const VALID_PATTERN = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
 const DEFAULT_MAX = 30;
 const MAX_AVATARS = 40;
 
-function SegmentedControl<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string }[];
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-fg-muted mr-1 text-sm">{label}</span>
-      <div className="flex bg-fg/5 rounded-md p-0.5">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-sm ${
-              value === option.value
-                ? 'bg-bg text-fg shadow-sm'
-                : 'text-fg-muted hover:text-fg'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function normalize(value: string) {
-  return value.trim();
-}
-
 export function EmbedGenerator() {
   const [input, setInput] = useState('');
   const [maxInput, setMaxInput] = useState(String(DEFAULT_MAX));
-  const [styleInput, setStyleInput] = useState<'mosaic' | 'detailed'>('mosaic');
-  const [sortInput, setSortInput] = useState<'score' | 'stars'>('score');
-  const [themeInput, setThemeInput] = useState<'auto' | 'light' | 'dark'>(
-    'auto'
-  );
+  const [style, setStyle] = useState<'mosaic' | 'detailed'>('mosaic');
+  const [sort, setSort] = useState<'score' | 'stars'>('score');
+  const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [generated, setGenerated] = useState('');
   const [generatedMax, setGeneratedMax] = useState(DEFAULT_MAX);
-  const [generatedStyle, setGeneratedStyle] = useState<'mosaic' | 'detailed'>(
-    'mosaic'
-  );
-  const [generatedSort, setGeneratedSort] = useState<'score' | 'stars'>(
-    'score'
-  );
-  const [generatedTheme, setGeneratedTheme] = useState<
-    'auto' | 'light' | 'dark'
-  >('auto');
   const [snippetTab, setSnippetTab] = useState<'markdown' | 'html'>('markdown');
-  const [markdownCopied, setMarkdownCopied] = useState(false);
-  const [htmlCopied, setHtmlCopied] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const markdownTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const htmlTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [copied, setCopied] = useState(false);
+  const [imageStatus, setImageStatus] = useState<
+    'idle' | 'loading' | 'loaded' | 'error'
+  >('idle');
+  const copyTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const normalized = normalize(input);
+  const normalized = input.trim();
   const isValid = VALID_PATTERN.test(normalized);
   const showHint = input.length > 0 && !isValid;
+
   const displayPath = generated ? `npm/${generated}` : 'npm/package';
   const displayMax = generated ? generatedMax : DEFAULT_MAX;
-  const displayStyle = generated ? generatedStyle : 'mosaic';
-  const displaySort = generated ? generatedSort : 'score';
-  const displayTheme = generated ? generatedTheme : 'auto';
 
   const params = new URLSearchParams();
-  if (displayMax !== DEFAULT_MAX) params.set('max', String(displayMax));
-  if (displayStyle !== 'mosaic') params.set('style', displayStyle);
-  if (displaySort !== 'score') params.set('sort', displaySort);
-  if (displayTheme !== 'auto') params.set('theme', displayTheme);
+
+  if (displayMax !== DEFAULT_MAX) {
+    params.set('max', String(displayMax));
+  }
+
+  if (style !== 'mosaic') {
+    params.set('style', style);
+  }
+
+  if (sort !== 'score') {
+    params.set('sort', sort);
+  }
+
+  if (theme !== 'auto') {
+    params.set('theme', theme);
+  }
+
   const query = params.size > 0 ? `?${params}` : '';
   const imageUrl = `https://api.usedby.dev/${displayPath}${query}`;
-  const dependentsUrl = `https://github.com/OWNER/REPO/network/dependents`;
+  const dependentsUrl = `https://github.com/owner/repo/network/dependents`;
   const markdownSnippet = `[![Used by](${imageUrl})](${dependentsUrl})\n\n<sub>Made with [usedby.dev](https://usedby.dev/).</sub>`;
   const htmlSnippet = `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>\n\n<sub>Made with <a href="https://usedby.dev/">usedby.dev</a>.</sub>`;
+  const imageKey = `${generated}-${generatedMax}-${style}-${sort}-${theme}`;
 
-  const clampMax = (value: string) =>
-    Math.max(1, Math.min(MAX_AVATARS, Math.floor(Number(value)) || 1));
+  function clampMax(value: string) {
+    return Math.max(1, Math.min(MAX_AVATARS, Math.floor(Number(value)) || 1));
+  }
+
+  function resetImage() {
+    return setImageStatus('loading');
+  }
 
   const generate = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!isValid) return;
+    (event: React.FormEvent) => {
+      event.preventDefault();
+
+      if (!isValid) {
+        return;
+      }
+
       setGenerated(normalized);
       setGeneratedMax(clampMax(maxInput));
-      setGeneratedStyle(styleInput);
-      setGeneratedSort(sortInput);
-      setGeneratedTheme(themeInput);
-      setImageLoaded(false);
-      setImageError(false);
+      setImageStatus('loading');
     },
-    [isValid, normalized, maxInput, styleInput, sortInput, themeInput]
+    [isValid, normalized, maxInput]
   );
 
-  const copyMarkdown = useCallback(async () => {
-    if (!generated) return;
-    try {
-      await navigator.clipboard.writeText(markdownSnippet);
-      clearTimeout(markdownTimeout.current);
-      setMarkdownCopied(true);
-      markdownTimeout.current = setTimeout(
-        () => setMarkdownCopied(false),
-        2000
-      );
-    } catch {
-      /* clipboard unavailable */
+  const copySnippet = useCallback(async () => {
+    if (!generated) {
+      return;
     }
-  }, [generated, markdownSnippet]);
 
-  const copyHtml = useCallback(async () => {
-    if (!generated) return;
+    const text = snippetTab === 'markdown' ? markdownSnippet : htmlSnippet;
+
     try {
-      await navigator.clipboard.writeText(htmlSnippet);
-      clearTimeout(htmlTimeout.current);
-      setHtmlCopied(true);
-      htmlTimeout.current = setTimeout(() => setHtmlCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }, [generated, htmlSnippet]);
+      await navigator.clipboard.writeText(text);
+
+      clearTimeout(copyTimeout.current);
+      setCopied(true);
+
+      copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [generated, snippetTab, markdownSnippet, htmlSnippet]);
 
   return (
     <section className="py-10">
@@ -145,7 +102,7 @@ export function EmbedGenerator() {
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(event) => setInput(event.target.value)}
           placeholder="npm package name"
           aria-label="npm package name"
           className="flex-1 bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl outline-none placeholder:text-fg-muted focus-visible:ring-2 focus-visible:ring-fg/20 max-sm:text-[0.8125rem] max-sm:p-5"
@@ -155,7 +112,7 @@ export function EmbedGenerator() {
           <input
             type="number"
             value={maxInput}
-            onChange={(e) => setMaxInput(e.target.value)}
+            onChange={(event) => setMaxInput(event.target.value)}
             onBlur={() => setMaxInput(String(clampMax(maxInput)))}
             min={1}
             max={MAX_AVATARS}
@@ -174,13 +131,12 @@ export function EmbedGenerator() {
       <div className="flex flex-wrap gap-4 text-sm mb-2">
         <SegmentedControl
           label="Style"
-          value={styleInput}
-          onChange={(v) => {
-            setStyleInput(v);
+          value={style}
+          onChange={(value) => {
+            setStyle(value);
+
             if (generated) {
-              setGeneratedStyle(v);
-              setImageLoaded(false);
-              setImageError(false);
+              resetImage();
             }
           }}
           options={[
@@ -190,13 +146,12 @@ export function EmbedGenerator() {
         />
         <SegmentedControl
           label="Sort"
-          value={sortInput}
-          onChange={(v) => {
-            setSortInput(v);
+          value={sort}
+          onChange={(value) => {
+            setSort(value);
+
             if (generated) {
-              setGeneratedSort(v);
-              setImageLoaded(false);
-              setImageError(false);
+              resetImage();
             }
           }}
           options={[
@@ -206,13 +161,12 @@ export function EmbedGenerator() {
         />
         <SegmentedControl
           label="Theme"
-          value={themeInput}
-          onChange={(v) => {
-            setThemeInput(v);
+          value={theme}
+          onChange={(value) => {
+            setTheme(value);
+
             if (generated) {
-              setGeneratedTheme(v);
-              setImageLoaded(false);
-              setImageError(false);
+              resetImage();
             }
           }}
           options={[
@@ -233,29 +187,31 @@ export function EmbedGenerator() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setSnippetTab('markdown')}
+                onClick={() => {
+                  setSnippetTab('markdown');
+                  setCopied(false);
+                }}
                 className={`text-sm cursor-pointer ${snippetTab === 'markdown' ? 'text-fg' : 'text-fg-muted hover:text-fg'}`}
               >
                 Markdown
               </button>
               <button
                 type="button"
-                onClick={() => setSnippetTab('html')}
+                onClick={() => {
+                  setSnippetTab('html');
+                  setCopied(false);
+                }}
                 className={`text-sm cursor-pointer ${snippetTab === 'html' ? 'text-fg' : 'text-fg-muted hover:text-fg'}`}
               >
                 HTML
               </button>
             </div>
             <button
-              onClick={snippetTab === 'markdown' ? copyMarkdown : copyHtml}
+              onClick={copySnippet}
               disabled={!generated}
               className="text-sm text-fg-muted hover:text-fg cursor-pointer disabled:cursor-default disabled:hover:text-fg-muted"
             >
-              <span aria-live="polite">
-                {(snippetTab === 'markdown' ? markdownCopied : htmlCopied)
-                  ? 'Copied!'
-                  : 'Copy'}
-              </span>
+              <span aria-live="polite">{copied ? 'Copied!' : 'Copy'}</span>
             </button>
           </div>
           <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl overflow-x-auto max-sm:text-[0.8125rem] max-sm:p-5">
@@ -268,10 +224,10 @@ export function EmbedGenerator() {
           <p className="text-sm text-fg-muted mb-3">Preview</p>
           {generated ? (
             <>
-              {!imageLoaded && !imageError && (
+              {imageStatus === 'loading' && (
                 <div className="bg-code-bg rounded-xl h-92 animate-pulse" />
               )}
-              {imageError && (
+              {imageStatus === 'error' && (
                 <div className="bg-code-bg rounded-xl h-92 flex items-center justify-center">
                   <p className="text-sm text-fg-muted">
                     Failed to load preview
@@ -279,12 +235,12 @@ export function EmbedGenerator() {
                 </div>
               )}
               <img
-                key={`${generated}-${generatedMax}-${generatedStyle}-${generatedSort}-${generatedTheme}`}
+                key={imageKey}
                 src={imageUrl}
                 alt={`${generated} dependents mosaic`}
-                onLoad={() => setImageLoaded(true)}
-                onError={() => setImageError(true)}
-                className={imageLoaded ? '' : 'hidden'}
+                onLoad={() => setImageStatus('loaded')}
+                onError={() => setImageStatus('error')}
+                className={imageStatus === 'loaded' ? '' : 'hidden'}
               />
             </>
           ) : (
@@ -293,5 +249,41 @@ export function EmbedGenerator() {
         </div>
       </div>
     </section>
+  );
+}
+
+interface SegmentedControlProps<TValue extends string> {
+  label: string;
+  value: TValue;
+  onChange: (value: TValue) => void;
+  options: { value: TValue; label: string }[];
+}
+
+function SegmentedControl<TValue extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: SegmentedControlProps<TValue>) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-fg-muted mr-1 text-sm">{label}</span>
+      <div className="flex bg-fg/5 rounded-md p-0.5">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-sm ${
+              value === option.value
+                ? 'bg-bg text-fg shadow-sm'
+                : 'text-fg-muted hover:text-fg'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
