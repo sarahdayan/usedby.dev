@@ -211,13 +211,15 @@ describe('worker', () => {
 
       await worker.fetch(createRequest('/npm/react'), env, ctx);
 
-      expect(getDependents).toHaveBeenCalledWith({
-        platform: 'npm',
-        packageName: 'react',
-        kv: env.DEPENDENTS_CACHE,
-        env: { GITHUB_TOKEN: 'fake-token' },
-        waitUntil: expect.any(Function),
-      });
+      expect(getDependents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          platform: 'npm',
+          packageName: 'react',
+          kv: env.DEPENDENTS_CACHE,
+          env: { GITHUB_TOKEN: 'fake-token' },
+          waitUntil: expect.any(Function),
+        })
+      );
     });
 
     it('calls getDependents with scoped package name', async () => {
@@ -233,13 +235,44 @@ describe('worker', () => {
 
       await worker.fetch(createRequest('/npm/@babel/core'), env, ctx);
 
-      expect(getDependents).toHaveBeenCalledWith({
-        platform: 'npm',
-        packageName: '@babel/core',
-        kv: env.DEPENDENTS_CACHE,
-        env: { GITHUB_TOKEN: 'fake-token' },
-        waitUntil: expect.any(Function),
+      expect(getDependents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          platform: 'npm',
+          packageName: '@babel/core',
+          kv: env.DEPENDENTS_CACHE,
+          env: { GITHUB_TOKEN: 'fake-token' },
+          waitUntil: expect.any(Function),
+        })
+      );
+    });
+
+    it('does not produce dev logs when DEV is not set', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [createScoredRepo('app')],
+        fromCache: false,
+        refreshing: false,
       });
+      vi.mocked(fetchAvatars).mockResolvedValue([
+        { dataUri: 'data:image/png;base64,abc', fullName: 'facebook/app' },
+      ]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      try {
+        await worker.fetch(
+          createRequest('/npm/react'),
+          createEnv(),
+          createCtx()
+        );
+
+        const devCalls = consoleSpy.mock.calls.filter(
+          (args) => typeof args[0] === 'string' && args[0].startsWith('[dev]')
+        );
+        expect(devCalls).toHaveLength(0);
+      } finally {
+        consoleSpy.mockRestore();
+      }
     });
 
     it('returns 500 SVG on pipeline error', async () => {

@@ -169,7 +169,12 @@ describe('getDependents', () => {
       fromCache: false,
       refreshing: false,
     });
-    expect(refreshDependents).toHaveBeenCalledWith('react', options.env, NOW);
+    expect(refreshDependents).toHaveBeenCalledWith(
+      'react',
+      options.env,
+      NOW,
+      undefined
+    );
     expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', entry);
     expect(options.waitUntil).not.toHaveBeenCalled();
   });

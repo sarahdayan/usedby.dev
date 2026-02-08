@@ -1,7 +1,9 @@
 import type { ScoredRepo } from '../github/types';
 import type { CacheEntry } from './types';
+import type { DevLogger } from '../dev-logger';
 import { refreshDependents } from '../github/pipeline';
 import {
+  FRESH_TTL_MS,
   buildCacheKey,
   readCache,
   touchLastAccessed,
@@ -15,6 +17,7 @@ export interface GetDependentsOptions {
   env: { GITHUB_TOKEN: string };
   waitUntil: (promise: Promise<unknown>) => void;
   now?: Date;
+  logger?: DevLogger;
 }
 
 export interface GetDependentsResult {
@@ -26,23 +29,40 @@ export interface GetDependentsResult {
 export async function getDependents(
   options: GetDependentsOptions
 ): Promise<GetDependentsResult> {
-  const { platform, packageName, kv, env, waitUntil, now } = options;
+  const { platform, packageName, kv, env, waitUntil, now, logger } = options;
   const key = buildCacheKey(platform, packageName);
   const cached = await readCache(kv, key, now);
 
   if (cached.status === 'hit') {
+    const ageMs =
+      (now ?? new Date()).getTime() -
+      new Date(cached.entry.fetchedAt).getTime();
+    const ageMin = Math.round(ageMs / 60_000);
+    logger?.log(
+      'cache',
+      `hit (${ageMin}m old, fresh for ${Math.round(FRESH_TTL_MS / 60_000)}m), ${cached.entry.repos.length} repos`
+    );
     waitUntil(touchLastAccessed(kv, key, cached.entry, now));
 
     return { repos: cached.entry.repos, fromCache: true, refreshing: false };
   }
 
   if (cached.status === 'stale') {
+    const ageMs =
+      (now ?? new Date()).getTime() -
+      new Date(cached.entry.fetchedAt).getTime();
+    const ageH = Math.round(ageMs / 3_600_000);
+    logger?.log(
+      'cache',
+      `stale (${ageH}h old), ${cached.entry.repos.length} repos, refreshing in background`
+    );
     waitUntil(backgroundRefresh(packageName, env, kv, key, cached.entry, now));
 
     return { repos: cached.entry.repos, fromCache: true, refreshing: true };
   }
 
-  const entry = await refreshDependents(packageName, env, now);
+  logger?.log('cache', 'miss');
+  const entry = await refreshDependents(packageName, env, now, logger);
   await writeCache(kv, key, entry);
 
   return { repos: entry.repos, fromCache: false, refreshing: false };

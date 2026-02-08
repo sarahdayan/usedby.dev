@@ -1,12 +1,14 @@
 import { Octokit } from '@octokit/rest';
 
+import type { DevLogger } from '../dev-logger';
 import type { DependentRepo, EnrichResult } from './types';
 
 const BATCH_SIZE = 50;
 
 export async function enrichRepos(
   repos: DependentRepo[],
-  env: { GITHUB_TOKEN: string }
+  env: { GITHUB_TOKEN: string },
+  logger?: DevLogger
 ): Promise<EnrichResult> {
   if (repos.length === 0) {
     return { repos: [], rateLimited: false };
@@ -55,6 +57,13 @@ export async function enrichRepos(
       });
     }
   }
+
+  const batchCount = Math.ceil(repos.length / BATCH_SIZE);
+  const nullSkipped = repos.length - enriched.length;
+  logger?.log(
+    'enrich',
+    `${repos.length} \u2192 ${enriched.length} (${batchCount} batches${nullSkipped > 0 ? `, ${nullSkipped} null` : ''})`
+  );
 
   return { repos: enriched, rateLimited: false };
 }

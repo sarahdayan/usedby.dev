@@ -48,7 +48,7 @@ describe('refreshDependents', () => {
 
     const result = await refreshDependents('react', ENV, NOW);
 
-    expect(searchDependents).toHaveBeenCalledWith('react', ENV);
+    expect(searchDependents).toHaveBeenCalledWith('react', ENV, undefined);
 
     // enrichRepos receives all non-fork repos (star filter deferred to post-enrichment)
     const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![0];

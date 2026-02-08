@@ -1,4 +1,5 @@
 import { getDependents } from './cache/get-dependents';
+import { DevLogger } from './dev-logger';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { DEFAULT_MAX } from './svg/constants';
 import { fetchAvatars } from './svg/fetch-avatars';
@@ -8,6 +9,7 @@ import { renderMosaic } from './svg/render-mosaic';
 interface Env {
   DEPENDENTS_CACHE: KVNamespace;
   GITHUB_TOKEN: string;
+  DEV?: string;
 }
 
 const SUPPORTED_PLATFORMS = ['npm'] as const;
@@ -81,6 +83,10 @@ export default {
       max = parsed;
     }
 
+    const logger = new DevLogger(env.DEV === 'true');
+    logger.time('total');
+    logger.log('request', `GET /${platform}/${packageName}`);
+
     try {
       const { repos } = await getDependents({
         platform: 'npm',
@@ -88,11 +94,20 @@ export default {
         kv: env.DEPENDENTS_CACHE,
         env: { GITHUB_TOKEN: env.GITHUB_TOKEN },
         waitUntil: ctx.waitUntil.bind(ctx),
+        logger,
       });
 
       const displayRepos = repos.slice(0, max ?? DEFAULT_MAX);
+
+      logger.time('avatars');
       const avatars = await fetchAvatars(displayRepos);
+      logger.timeEnd('avatars');
+      logger.log('avatars', `${avatars.length} fetched`);
+
       const svg = renderMosaic(avatars);
+
+      logger.timeEnd('total');
+      logger.summary();
 
       return new Response(svg, {
         headers: {
@@ -102,6 +117,9 @@ export default {
       });
     } catch (error) {
       console.error('Pipeline error:', error);
+
+      logger.timeEnd('total');
+      logger.summary();
 
       return new Response(renderMessage('Something went wrong'), {
         status: 500,

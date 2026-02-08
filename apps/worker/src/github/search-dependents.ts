@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 
+import type { DevLogger } from '../dev-logger';
 import {
   getRetryAfter,
   getRetryDelay,
@@ -17,13 +18,15 @@ const PAGE_DELAY_MS = 6_500;
 
 export async function searchDependents(
   packageName: string,
-  env: { GITHUB_TOKEN: string }
+  env: { GITHUB_TOKEN: string },
+  logger?: DevLogger
 ): Promise<SearchResult> {
   const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
 
   const seen = new Set<string>();
   const repos: DependentRepo[] = [];
   let hitPageCap = false;
+  let pagesFetched = 0;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     let response;
@@ -41,6 +44,8 @@ export async function searchDependents(
 
       throw error;
     }
+
+    pagesFetched++;
 
     for (const item of response.data.items) {
       const repo = item.repository;
@@ -73,6 +78,12 @@ export async function searchDependents(
       await sleep(PAGE_DELAY_MS);
     }
   }
+
+  const flags = [hitPageCap && 'capped'].filter(Boolean).join(', ');
+  logger?.log(
+    'search',
+    `${repos.length} repos (${pagesFetched} pages${flags ? `, ${flags}` : ''})`
+  );
 
   return { repos, partial: false, rateLimited: false, capped: hitPageCap };
 }
