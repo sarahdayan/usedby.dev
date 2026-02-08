@@ -2,6 +2,8 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "usedby-dev",
   "main": "src/index.ts",
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-02-07",
   "kv_namespaces": [
     {
