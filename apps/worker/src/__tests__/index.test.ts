@@ -1,5 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScoredRepo } from '../github/types';
+
+const mockCache = {
+  match: vi.fn() as ReturnType<typeof vi.fn>,
+  put: vi.fn() as ReturnType<typeof vi.fn>,
+};
+
+vi.stubGlobal('caches', { default: mockCache });
 
 vi.mock('../cache/get-dependents', () => ({
   getDependents: vi.fn(),
@@ -32,6 +39,11 @@ import { fetchAvatars } from '../svg/fetch-avatars';
 import { renderMessage } from '../svg/render-message';
 import { renderMosaic } from '../svg/render-mosaic';
 import worker from '../index';
+
+beforeEach(() => {
+  mockCache.match.mockResolvedValue(undefined);
+  mockCache.put.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -699,6 +711,118 @@ describe('worker', () => {
       expect(getDependents).not.toHaveBeenCalled();
     });
   });
+
+  describe('edge cache', () => {
+    it('returns cached response on cache hit', async () => {
+      const cachedResponse = new Response('<svg>cached</svg>', {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        },
+      });
+      mockCache.match.mockResolvedValue(cachedResponse);
+
+      const response = await worker.fetch(
+        createRequest('/npm/react'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response).toBe(cachedResponse);
+      expect(getDependents).not.toHaveBeenCalled();
+      expect(mockCache.put).not.toHaveBeenCalled();
+    });
+
+    it('runs pipeline and calls cache.put on cache miss', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg>fresh</svg>');
+      const ctx = createCtx();
+
+      const response = await worker.fetch(
+        createRequest('/npm/react'),
+        createEnv(),
+        ctx
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe('<svg>fresh</svg>');
+      expect(getDependents).toHaveBeenCalled();
+      expect(mockCache.put).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.any(Response)
+      );
+      expect(ctx.waitUntil).toHaveBeenCalled();
+    });
+
+    it('does not call cache.put on pipeline error', async () => {
+      vi.mocked(getDependents).mockRejectedValue(new Error('API failure'));
+      vi.mocked(renderMessage).mockReturnValue('<svg>error</svg>');
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      try {
+        await worker.fetch(
+          createRequest('/npm/react'),
+          createEnv(),
+          createCtx()
+        );
+
+        expect(mockCache.put).not.toHaveBeenCalled();
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it('normalizes query param order for cache key', async () => {
+      const cachedResponse = new Response('<svg>cached</svg>', {
+        headers: { 'Content-Type': 'image/svg+xml' },
+      });
+      mockCache.match.mockResolvedValue(cachedResponse);
+
+      await worker.fetch(
+        createRequest('/npm/react?theme=dark&style=mosaic'),
+        createEnv(),
+        createCtx()
+      );
+
+      await worker.fetch(
+        createRequest('/npm/react?style=mosaic&theme=dark'),
+        createEnv(),
+        createCtx()
+      );
+
+      const firstUrl = (mockCache.match.mock.calls[0]![0] as Request).url;
+      const secondUrl = (mockCache.match.mock.calls[1]![0] as Request).url;
+
+      expect(firstUrl).toBe(secondUrl);
+    });
+
+    it('skips cache.match in dev mode', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(
+        createRequest('/npm/react'),
+        createEnv({ DEV: 'true' }),
+        createCtx()
+      );
+
+      expect(mockCache.match).not.toHaveBeenCalled();
+      expect(mockCache.put).not.toHaveBeenCalled();
+      expect(getDependents).toHaveBeenCalled();
+    });
+  });
 });
 
 function createScoredRepo(
@@ -720,10 +844,11 @@ function createScoredRepo(
   };
 }
 
-function createEnv() {
+function createEnv(overrides?: { DEV?: string }) {
   return {
     DEPENDENTS_CACHE: {} as KVNamespace,
     GITHUB_TOKEN: 'fake-token',
+    ...overrides,
   };
 }
 

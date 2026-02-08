@@ -133,6 +133,16 @@ export default {
     const isDev = env.DEV === 'true';
     const logger = new DevLogger(isDev);
     const limits = getLimits(isDev);
+
+    const cache = caches.default;
+    url.searchParams.sort();
+    const cacheKey = new Request(url.toString(), request);
+
+    if (!isDev) {
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+    }
+
     logger.time('total');
     logger.log('request', `GET /${platform}/${packageName}`);
 
@@ -161,12 +171,17 @@ export default {
       logger.timeEnd('total');
       logger.summary();
 
-      return new Response(svg, {
+      const response = new Response(svg, {
         headers: {
           'Content-Type': 'image/svg+xml',
           'Cache-Control': 'public, max-age=86400, s-maxage=86400',
         },
       });
+      if (!isDev) {
+        ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      }
+
+      return response;
     } catch (error) {
       console.error('Pipeline error:', error);
 
