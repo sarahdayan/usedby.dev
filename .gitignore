@@ -23,6 +23,7 @@ coverage
 
 # Wrangler
 .wrangler
+.dev.vars
 
 # Build Outputs
 .next/
