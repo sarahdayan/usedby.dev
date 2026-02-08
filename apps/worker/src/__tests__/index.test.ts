@@ -120,9 +120,13 @@ describe('worker', () => {
       expect(await response.text()).toBe('<svg>mosaic</svg>');
     });
 
-    it('passes max query param to renderer', async () => {
+    it('slices repos to max before fetching avatars', async () => {
+      const repos = Array.from({ length: 5 }, (_, i) =>
+        createScoredRepo(`repo-${i}`)
+      );
+
       vi.mocked(getDependents).mockResolvedValue({
-        repos: [],
+        repos,
         fromCache: false,
         refreshing: false,
       });
@@ -130,15 +134,15 @@ describe('worker', () => {
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
       await worker.fetch(
-        createRequest('/npm/react?max=10'),
+        createRequest('/npm/react?max=2'),
         createEnv(),
         createCtx()
       );
 
-      expect(renderMosaic).toHaveBeenCalledWith([], { max: 10 });
+      expect(fetchAvatars).toHaveBeenCalledWith(repos.slice(0, 2));
     });
 
-    it('passes undefined max when param is absent', async () => {
+    it('uses default max when param is absent', async () => {
       vi.mocked(getDependents).mockResolvedValue({
         repos: [],
         fromCache: false,
@@ -149,7 +153,7 @@ describe('worker', () => {
 
       await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
 
-      expect(renderMosaic).toHaveBeenCalledWith([], { max: undefined });
+      expect(fetchAvatars).toHaveBeenCalledWith([]);
     });
 
     it('sets correct Cache-Control header', async () => {

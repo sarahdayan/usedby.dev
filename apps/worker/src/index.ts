@@ -1,5 +1,6 @@
 import { getDependents } from './cache/get-dependents';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
+import { DEFAULT_MAX } from './svg/constants';
 import { fetchAvatars } from './svg/fetch-avatars';
 import { renderMessage } from './svg/render-message';
 import { renderMosaic } from './svg/render-mosaic';
@@ -89,8 +90,9 @@ export default {
         waitUntil: ctx.waitUntil.bind(ctx),
       });
 
-      const avatars = await fetchAvatars(repos);
-      const svg = renderMosaic(avatars, { max });
+      const displayRepos = repos.slice(0, max ?? DEFAULT_MAX);
+      const avatars = await fetchAvatars(displayRepos);
+      const svg = renderMosaic(avatars);
 
       return new Response(svg, {
         headers: {

@@ -391,8 +391,8 @@ describe('searchDependents', () => {
       GITHUB_TOKEN: 'fake-token',
     });
 
-    expect(requestCount).toBe(10);
-    expect(results.repos).toHaveLength(1000);
+    expect(requestCount).toBe(3);
+    expect(results.repos).toHaveLength(300);
     expect(results.partial).toBe(false);
     expect(results.capped).toBe(true);
   });
@@ -419,8 +419,8 @@ describe('searchDependents', () => {
 
     await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
 
-    // 10 pages, but sleep only between pages (9 times, not after page 10)
-    expect(sleep).toHaveBeenCalledTimes(9);
+    // 3 pages, but sleep only between pages (2 times, not after page 3)
+    expect(sleep).toHaveBeenCalledTimes(2);
   });
 
   it('stops early when fewer results than per_page', async () => {
