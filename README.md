@@ -4,7 +4,7 @@
 
 usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any npm package — perfect for your README, docs, or landing page.
 
-![usedby.dev demo for algoliasearch](https://api.usedby.dev/npm/algoliasearch?max=20)
+![usedby.dev demo for dinero.js](https://api.usedby.dev/npm/dinero.js?max=30)
 
 ## Quick start
 
