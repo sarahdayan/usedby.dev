@@ -12,16 +12,16 @@ const htmlSnippet = `<a href="https://github.com/your-org/your-repo/network/depe
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  async function onCopy() {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }
 
   return (
     <button
       type="button"
-      onClick={handleCopy}
+      onClick={onCopy}
       className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       aria-label="Copy to clipboard"
     >
@@ -51,7 +51,7 @@ export function QuickStart() {
           Quick start
         </p>
         <h2 className="mt-4 text-balance text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          One line. That&apos;s it.
+          One line, that&apos;s it.
         </h2>
         <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
           Add a single line of Markdown to your README and let the world see who
@@ -68,7 +68,7 @@ export function QuickStart() {
               <CopyButton text={markdownSnippet} />
             </div>
             <div className="overflow-x-auto p-4">
-              <pre className="font-mono text-sm leading-relaxed text-foreground">
+              <pre className="font-mono text-sm leading-loose text-foreground">
                 <code>{markdownSnippet}</code>
               </pre>
             </div>
@@ -83,7 +83,7 @@ export function QuickStart() {
               <CopyButton text={htmlSnippet} />
             </div>
             <div className="overflow-x-auto p-4">
-              <pre className="font-mono text-sm leading-relaxed text-foreground">
+              <pre className="font-mono text-sm leading-loose text-foreground">
                 <code>{htmlSnippet}</code>
               </pre>
             </div>

@@ -268,7 +268,7 @@ export function Playground() {
                   <CopyButton text={markdownEmbed} label="Markdown" />
                 </div>
                 <div className="overflow-x-auto p-4">
-                  <pre className="font-mono text-xs leading-relaxed text-foreground">
+                  <pre className="font-mono text-xs leading-loose text-foreground">
                     <code>{markdownEmbed}</code>
                   </pre>
                 </div>
@@ -283,7 +283,7 @@ export function Playground() {
                   <CopyButton text={htmlEmbed} label="HTML" />
                 </div>
                 <div className="overflow-x-auto p-4">
-                  <pre className="font-mono text-xs leading-relaxed text-foreground">
+                  <pre className="font-mono text-xs leading-loose text-foreground">
                     <code>{htmlEmbed}</code>
                   </pre>
                 </div>

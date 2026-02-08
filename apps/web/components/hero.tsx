@@ -33,9 +33,9 @@ export function Hero() {
           </h1>
 
           {/* Description */}
-          <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground lg:text-xl">
-            A single embeddable image that showcases your top dependents —
-            avatars, names, and star counts. No API key, no sign-up, no config.
+          <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground lg:text-xl">
+            A single embeddable image that showcases your top dependents. No API
+            key, no sign-up, no config.
           </p>
 
           {/* CTA buttons */}
@@ -70,7 +70,6 @@ export function Hero() {
               />
               <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground lg:mt-4">
                 <span className="font-mono">api.usedby.dev/npm/dinero.js</span>
-                <span>Live data — refreshes every 24h</span>
               </div>
             </div>
           </div>
