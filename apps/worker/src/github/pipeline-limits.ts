@@ -15,7 +15,7 @@ export interface PipelineLimits {
 
 /** Cloudflare Workers free plan: 50 subrequests/request.
  *  Budget: ~5 search + 2 enrich + ~35 avatars = ~42 of 50. */
-export const PROD_LIMITS: PipelineLimits = {
+export const FREE_LIMITS: PipelineLimits = {
   maxPages: 5,
   enrichCap: 100,
   batchSize: 50,
@@ -23,6 +23,20 @@ export const PROD_LIMITS: PipelineLimits = {
   minStars: 5,
   defaultMax: 35,
 };
+
+/** Cloudflare Workers paid plan: 1,000 subrequests/request.
+ *  Budget: ~10 search + 10 enrich + ~100 avatars = ~120 of 1,000. */
+export const PAID_LIMITS: PipelineLimits = {
+  maxPages: 10,
+  enrichCap: 500,
+  batchSize: 50,
+  pageDelayMs: 6_500,
+  minStars: 5,
+  defaultMax: 100,
+};
+
+/** @deprecated Use PAID_LIMITS or FREE_LIMITS instead. */
+export const PROD_LIMITS: PipelineLimits = PAID_LIMITS;
 
 /** Local dev (wrangler dev): no subrequest limit, only GitHub rate limit (5k/hr). */
 export const DEV_LIMITS: PipelineLimits = {
@@ -35,5 +49,5 @@ export const DEV_LIMITS: PipelineLimits = {
 };
 
 export function getLimits(dev: boolean): PipelineLimits {
-  return dev ? DEV_LIMITS : PROD_LIMITS;
+  return dev ? DEV_LIMITS : PAID_LIMITS;
 }

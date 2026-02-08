@@ -10,7 +10,7 @@ import {
   vi,
 } from 'vitest';
 
-import { PROD_LIMITS } from '../pipeline-limits';
+import { FREE_LIMITS, PROD_LIMITS } from '../pipeline-limits';
 import { sleep } from '../rate-limit';
 import { searchDependents } from '../search-dependents';
 
@@ -391,9 +391,12 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
-      GITHUB_TOKEN: 'fake-token',
-    });
+    const results = await searchDependents(
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' },
+      undefined,
+      FREE_LIMITS
+    );
 
     expect(requestCount).toBe(5);
     expect(results.repos).toHaveLength(500);
@@ -421,7 +424,12 @@ describe('searchDependents', () => {
       })
     );
 
-    await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    await searchDependents(
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' },
+      undefined,
+      FREE_LIMITS
+    );
 
     // 5 pages, but sleep only between pages (4 times, not after page 5)
     expect(sleep).toHaveBeenCalledTimes(4);
