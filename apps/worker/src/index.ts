@@ -1,5 +1,6 @@
 import { getDependents } from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
+import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { DEFAULT_MAX } from './svg/constants';
 import { fetchAvatars } from './svg/fetch-avatars';
@@ -83,7 +84,9 @@ export default {
       max = parsed;
     }
 
-    const logger = new DevLogger(env.DEV === 'true');
+    const isDev = env.DEV === 'true';
+    const logger = new DevLogger(isDev);
+    const limits = getLimits(isDev);
     logger.time('total');
     logger.log('request', `GET /${platform}/${packageName}`);
 
@@ -95,6 +98,7 @@ export default {
         env: { GITHUB_TOKEN: env.GITHUB_TOKEN },
         waitUntil: ctx.waitUntil.bind(ctx),
         logger,
+        limits,
       });
 
       const displayRepos = repos.slice(0, max ?? DEFAULT_MAX);

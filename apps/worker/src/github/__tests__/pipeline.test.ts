@@ -12,6 +12,7 @@ vi.mock('../enrich-repos', () => ({
 
 import { enrichRepos } from '../enrich-repos';
 import { refreshDependents } from '../pipeline';
+import { PROD_LIMITS } from '../pipeline-limits';
 import { searchDependents } from '../search-dependents';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
@@ -48,7 +49,12 @@ describe('refreshDependents', () => {
 
     const result = await refreshDependents('react', ENV, NOW);
 
-    expect(searchDependents).toHaveBeenCalledWith('react', ENV, undefined);
+    expect(searchDependents).toHaveBeenCalledWith(
+      'react',
+      ENV,
+      undefined,
+      PROD_LIMITS
+    );
 
     // enrichRepos receives all non-fork repos (star filter deferred to post-enrichment)
     const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![0];

@@ -1,15 +1,16 @@
 import { Octokit } from '@octokit/rest';
 
 import type { DevLogger } from '../dev-logger';
+import type { PipelineLimits } from './pipeline-limits';
+import { PROD_LIMITS } from './pipeline-limits';
 import type { DependentRepo, EnrichResult } from './types';
-
-const BATCH_SIZE = 50;
 
 export async function enrichRepos(
   repos: DependentRepo[],
   packageName: string,
   env: { GITHUB_TOKEN: string },
-  logger?: DevLogger
+  logger?: DevLogger,
+  limits: PipelineLimits = PROD_LIMITS
 ): Promise<EnrichResult> {
   if (repos.length === 0) {
     return { repos: [], rateLimited: false };
@@ -20,8 +21,8 @@ export async function enrichRepos(
   const nullRepos: string[] = [];
   const falsePositives: string[] = [];
 
-  for (let i = 0; i < repos.length; i += BATCH_SIZE) {
-    const batch = repos.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < repos.length; i += limits.batchSize) {
+    const batch = repos.slice(i, i + limits.batchSize);
     const query = buildGraphQLQuery(batch);
 
     let data: Record<string, GraphQLRepoResult | null>;
@@ -67,7 +68,7 @@ export async function enrichRepos(
     }
   }
 
-  const batchCount = Math.ceil(repos.length / BATCH_SIZE);
+  const batchCount = Math.ceil(repos.length / limits.batchSize);
   const details: string[] = [`${batchCount} batches`];
   if (nullRepos.length > 0) details.push(`${nullRepos.length} null`);
   if (falsePositives.length > 0)

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterDependents, MIN_STARS } from '../filter-dependents';
+import { filterDependents } from '../filter-dependents';
+import { PROD_LIMITS } from '../pipeline-limits';
+
+const MIN_STARS = PROD_LIMITS.minStars;
 import type { DependentRepo } from '../types';
 
 describe('filterDependents', () => {

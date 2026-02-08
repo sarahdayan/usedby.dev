@@ -2,6 +2,8 @@ import type { ScoredRepo } from '../github/types';
 import type { CacheEntry } from './types';
 import type { DevLogger } from '../dev-logger';
 import { refreshDependents } from '../github/pipeline';
+import type { PipelineLimits } from '../github/pipeline-limits';
+import { PROD_LIMITS } from '../github/pipeline-limits';
 import {
   FRESH_TTL_MS,
   buildCacheKey,
@@ -18,6 +20,7 @@ export interface GetDependentsOptions {
   waitUntil: (promise: Promise<unknown>) => void;
   now?: Date;
   logger?: DevLogger;
+  limits?: PipelineLimits;
 }
 
 export interface GetDependentsResult {
@@ -29,7 +32,16 @@ export interface GetDependentsResult {
 export async function getDependents(
   options: GetDependentsOptions
 ): Promise<GetDependentsResult> {
-  const { platform, packageName, kv, env, waitUntil, now, logger } = options;
+  const {
+    platform,
+    packageName,
+    kv,
+    env,
+    waitUntil,
+    now,
+    logger,
+    limits = PROD_LIMITS,
+  } = options;
   const key = buildCacheKey(platform, packageName);
   const cached = await readCache(kv, key, now);
 
@@ -56,13 +68,15 @@ export async function getDependents(
       'cache',
       `stale (${ageH}h old), ${cached.entry.repos.length} repos, refreshing in background`
     );
-    waitUntil(backgroundRefresh(packageName, env, kv, key, cached.entry, now));
+    waitUntil(
+      backgroundRefresh(packageName, env, kv, key, cached.entry, now, limits)
+    );
 
     return { repos: cached.entry.repos, fromCache: true, refreshing: true };
   }
 
   logger?.log('cache', 'miss');
-  const entry = await refreshDependents(packageName, env, now, logger);
+  const entry = await refreshDependents(packageName, env, now, logger, limits);
   await writeCache(kv, key, entry);
 
   return { repos: entry.repos, fromCache: false, refreshing: false };
@@ -74,10 +88,17 @@ async function backgroundRefresh(
   kv: KVNamespace,
   key: string,
   staleEntry: CacheEntry,
-  now?: Date
+  now?: Date,
+  limits: PipelineLimits = PROD_LIMITS
 ): Promise<void> {
   try {
-    const entry = await refreshDependents(packageName, env, now);
+    const entry = await refreshDependents(
+      packageName,
+      env,
+      now,
+      undefined,
+      limits
+    );
     await writeCache(kv, key, entry);
   } catch (error) {
     // Refresh failed — still bump lastAccessedAt so the entry isn't

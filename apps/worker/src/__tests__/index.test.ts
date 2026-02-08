@@ -22,6 +22,7 @@ vi.mock('../scheduled/run-scheduled-refresh', () => ({
 }));
 
 import { getDependents } from '../cache/get-dependents';
+import { PROD_LIMITS } from '../github/pipeline-limits';
 import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
 import { renderMessage } from '../svg/render-message';
@@ -218,6 +219,7 @@ describe('worker', () => {
           kv: env.DEPENDENTS_CACHE,
           env: { GITHUB_TOKEN: 'fake-token' },
           waitUntil: expect.any(Function),
+          limits: PROD_LIMITS,
         })
       );
     });
@@ -242,6 +244,7 @@ describe('worker', () => {
           kv: env.DEPENDENTS_CACHE,
           env: { GITHUB_TOKEN: 'fake-token' },
           waitUntil: expect.any(Function),
+          limits: PROD_LIMITS,
         })
       );
     });

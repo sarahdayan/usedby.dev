@@ -1,11 +1,11 @@
 import type { DevLogger } from '../dev-logger';
+import { PROD_LIMITS } from './pipeline-limits';
 import type { DependentRepo } from './types';
-
-export const MIN_STARS = 5;
 
 export function filterDependents(
   repos: DependentRepo[],
-  logger?: DevLogger
+  logger?: DevLogger,
+  minStars: number = PROD_LIMITS.minStars
 ): DependentRepo[] {
   const kept: DependentRepo[] = [];
   const forks: string[] = [];
@@ -17,7 +17,7 @@ export function filterDependents(
       forks.push(repo.fullName);
     } else if (repo.archived) {
       archived.push(repo.fullName);
-    } else if (repo.stars < MIN_STARS) {
+    } else if (repo.stars < minStars) {
       lowStars.push(repo.fullName);
     } else {
       kept.push(repo);
@@ -28,7 +28,7 @@ export function filterDependents(
   if (forks.length > 0) reasons.push(`${forks.length} forks`);
   if (archived.length > 0) reasons.push(`${archived.length} archived`);
   if (lowStars.length > 0)
-    reasons.push(`${lowStars.length} <${MIN_STARS}\u2605`);
+    reasons.push(`${lowStars.length} <${minStars}\u2605`);
 
   logger?.log(
     'filter',

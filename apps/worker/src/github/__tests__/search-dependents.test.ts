@@ -10,6 +10,7 @@ import {
   vi,
 } from 'vitest';
 
+import { PROD_LIMITS } from '../pipeline-limits';
 import { sleep } from '../rate-limit';
 import { searchDependents } from '../search-dependents';
 
@@ -145,7 +146,7 @@ describe('searchDependents', () => {
     await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
 
     expect(sleep).toHaveBeenCalledTimes(1);
-    expect(sleep).toHaveBeenCalledWith(6_500);
+    expect(sleep).toHaveBeenCalledWith(PROD_LIMITS.pageDelayMs);
   });
 
   it('deduplicates repos with multiple package.json matches', async () => {

@@ -2,19 +2,26 @@ import type { CacheEntry } from '../cache/types';
 import type { DevLogger } from '../dev-logger';
 import { enrichRepos } from './enrich-repos';
 import { filterDependents } from './filter-dependents';
+import type { PipelineLimits } from './pipeline-limits';
+import { PROD_LIMITS } from './pipeline-limits';
 import { scoreDependents } from './score-dependents';
 import { searchDependents } from './search-dependents';
-
-const ENRICH_CAP = 100;
 
 export async function refreshDependents(
   packageName: string,
   env: { GITHUB_TOKEN: string },
   now: Date = new Date(),
-  logger?: DevLogger
+  logger?: DevLogger,
+  limits: PipelineLimits = PROD_LIMITS
 ): Promise<CacheEntry> {
+  const mode = limits === PROD_LIMITS ? 'prod' : 'dev';
+  logger?.log(
+    'limits',
+    `${mode} (maxPages=${limits.maxPages}, enrichCap=${limits.enrichCap}, minStars=${limits.minStars})`
+  );
+
   logger?.time('search');
-  const searchResult = await searchDependents(packageName, env, logger);
+  const searchResult = await searchDependents(packageName, env, logger, limits);
   logger?.timeEnd('search');
 
   // Filter forks before enrichment (reliably available from search).
@@ -33,15 +40,25 @@ export async function refreshDependents(
   );
   if (forks.length > 0) logger?.log('  forks', forks.join(', '));
 
-  const capped = preFiltered.slice(0, ENRICH_CAP);
+  const capped = preFiltered.slice(0, limits.enrichCap);
 
   // Enrich only the capped set (adds real star counts + archived status).
   logger?.time('enrich');
-  const enrichResult = await enrichRepos(capped, packageName, env, logger);
+  const enrichResult = await enrichRepos(
+    capped,
+    packageName,
+    env,
+    logger,
+    limits
+  );
   logger?.timeEnd('enrich');
 
   // Now filter with real data from enrichment, then score.
-  const filtered = filterDependents(enrichResult.repos, logger);
+  const filtered = filterDependents(
+    enrichResult.repos,
+    logger,
+    limits.minStars
+  );
 
   const scored = scoreDependents(filtered, now);
   logger?.log('score', `${scored.length} repos`);

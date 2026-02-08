@@ -2,6 +2,7 @@ import { FRESH_TTL_MS, writeCache } from '../cache/cache';
 import { parseCacheKey } from '../cache/parse-cache-key';
 import type { CacheMetadata } from '../cache/types';
 import { refreshDependents } from '../github/pipeline';
+import { PROD_LIMITS } from '../github/pipeline-limits';
 import {
   isRateLimitError,
   isSecondaryRateLimitError,
@@ -109,7 +110,9 @@ export async function runScheduledRefresh(
       const entry = await refreshDependents(
         staleEntry.packageName,
         { GITHUB_TOKEN: env.GITHUB_TOKEN },
-        now
+        now,
+        undefined,
+        PROD_LIMITS
       );
       // Preserve the original lastAccessedAt so cron refreshes don't reset
       // the eviction clock — only real user requests should extend it

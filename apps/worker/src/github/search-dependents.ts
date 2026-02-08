@@ -1,6 +1,8 @@
 import { Octokit } from '@octokit/rest';
 
 import type { DevLogger } from '../dev-logger';
+import type { PipelineLimits } from './pipeline-limits';
+import { PROD_LIMITS } from './pipeline-limits';
 import {
   getRetryAfter,
   getRetryDelay,
@@ -11,15 +13,14 @@ import {
 } from './rate-limit';
 import type { DependentRepo, SearchResult } from './types';
 
-const MAX_PAGES = 5;
 const PER_PAGE = 100;
 const MAX_RETRIES = 3;
-const PAGE_DELAY_MS = 6_500;
 
 export async function searchDependents(
   packageName: string,
   env: { GITHUB_TOKEN: string },
-  logger?: DevLogger
+  logger?: DevLogger,
+  limits: PipelineLimits = PROD_LIMITS
 ): Promise<SearchResult> {
   const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
 
@@ -28,7 +29,7 @@ export async function searchDependents(
   let hitPageCap = false;
   let pagesFetched = 0;
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  for (let page = 1; page <= limits.maxPages; page++) {
     let response;
 
     try {
@@ -73,10 +74,10 @@ export async function searchDependents(
       break;
     }
 
-    if (page === MAX_PAGES) {
+    if (page === limits.maxPages) {
       hitPageCap = true;
     } else {
-      await sleep(PAGE_DELAY_MS);
+      await sleep(limits.pageDelayMs);
     }
   }
 

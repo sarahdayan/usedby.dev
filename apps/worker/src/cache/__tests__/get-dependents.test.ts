@@ -23,6 +23,7 @@ import {
 } from '../cache';
 import { getDependents } from '../get-dependents';
 import { refreshDependents } from '../../github/pipeline';
+import { PROD_LIMITS } from '../../github/pipeline-limits';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
 
@@ -87,7 +88,13 @@ describe('getDependents', () => {
 
     // Await the promise passed to waitUntil to verify background work
     await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
-    expect(refreshDependents).toHaveBeenCalledWith('react', options.env, NOW);
+    expect(refreshDependents).toHaveBeenCalledWith(
+      'react',
+      options.env,
+      NOW,
+      undefined,
+      PROD_LIMITS
+    );
     expect(writeCache).toHaveBeenCalledWith(
       options.kv,
       'npm:react',
@@ -173,7 +180,8 @@ describe('getDependents', () => {
       'react',
       options.env,
       NOW,
-      undefined
+      undefined,
+      PROD_LIMITS
     );
     expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', entry);
     expect(options.waitUntil).not.toHaveBeenCalled();
