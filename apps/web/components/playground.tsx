@@ -133,9 +133,9 @@ export function Playground() {
       </div>
 
       <div className="mt-12 grid gap-8 lg:grid-cols-3">
-        {/* Controls */}
+
         <div className="space-y-6 lg:col-span-1 rounded-xl border border-border bg-card p-6">
-          {/* Package name */}
+
           <div className="space-y-2">
             <Label htmlFor="package-name" className="text-sm text-foreground">
               Package name
@@ -149,7 +149,7 @@ export function Playground() {
             />
           </div>
 
-          {/* Max dependents */}
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm text-foreground">Max dependents</Label>
@@ -166,7 +166,7 @@ export function Playground() {
             />
           </div>
 
-          {/* Style */}
+
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Style</Label>
             <div>
@@ -181,7 +181,7 @@ export function Playground() {
             </div>
           </div>
 
-          {/* Sort */}
+
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Sort</Label>
             <div>
@@ -196,7 +196,7 @@ export function Playground() {
             </div>
           </div>
 
-          {/* Theme */}
+
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Theme</Label>
             <div>
@@ -212,7 +212,7 @@ export function Playground() {
             </div>
           </div>
 
-          {/* Generate button */}
+
           <button
             type="button"
             onClick={handleLoadImage}
@@ -223,9 +223,9 @@ export function Playground() {
           </button>
         </div>
 
-        {/* Preview & embed codes */}
+
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          {/* Preview */}
+
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border px-4 py-3">
               <span className="text-xs font-medium text-muted-foreground">
@@ -256,10 +256,10 @@ export function Playground() {
             </div>
           </div>
 
-          {/* Embed codes */}
+
           {packageName && (
             <div className="space-y-4">
-              {/* Markdown */}
+
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
                   <span className="text-xs font-medium text-muted-foreground">
@@ -274,7 +274,7 @@ export function Playground() {
                 </div>
               </div>
 
-              {/* HTML */}
+
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
                   <span className="text-xs font-medium text-muted-foreground">

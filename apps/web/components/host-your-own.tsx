@@ -11,31 +11,30 @@ const steps = [
     icon: SearchIcon,
     title: 'Search',
     description:
-      'Queries npm and GitHub to discover packages that list yours as a dependency.',
+      'Query GitHub to discover projects that list yours as a dependency.',
   },
   {
     icon: DatabaseIcon,
     title: 'Enrich',
     description:
-      'Fetches metadata for each dependent — repository, stars, last push, and avatar.',
+      'Fetch metadata for each dependent: repository, stars, last push, and avatar.',
   },
   {
     icon: BarChart3Icon,
     title: 'Score',
     description:
-      'Ranks dependents by a composite score combining star count and recent activity.',
+      'Rank dependents by a composite score combining star count and recent activity.',
   },
   {
     icon: ImageIcon,
     title: 'Render',
     description:
-      'Generates a crisp SVG image on the fly with avatars, names, and star counts.',
+      'Generate a crisp SVG image on the fly with avatars, names, and star counts.',
   },
   {
     icon: ZapIcon,
     title: 'Cache',
-    description:
-      'Results are cached with stale-while-revalidate — 24h fresh, background refresh.',
+    description: 'Cache results and serve fresh ones every 24 hours.',
   },
 ];
 
@@ -49,8 +48,9 @@ export function HostYourOwn() {
         <h2 className="mt-4 text-balance text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           Host your own
         </h2>
-        <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
-          A Cloudflare Worker handles the entire pipeline in a single request.
+        <p className="mt-4 max-w-2xl text-center text-lg leading-relaxed text-muted-foreground">
+          Deploy as a Cloudflare Worker and handle the pipeline in a single
+          request.
         </p>
       </div>
 
