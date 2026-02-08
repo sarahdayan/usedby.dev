@@ -59,7 +59,6 @@ export function QuickStart() {
         </p>
 
         <div className="mt-12 w-full max-w-3xl space-y-6">
-
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
               <span className="text-xs font-medium text-muted-foreground">
@@ -73,7 +72,6 @@ export function QuickStart() {
               </pre>
             </div>
           </div>
-
 
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
