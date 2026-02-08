@@ -8,16 +8,10 @@
   "kv_namespaces": [
     {
       "binding": "DEPENDENTS_CACHE",
-      // Replace with the actual ID after running:
-      // wrangler kv namespace create DEPENDENTS_CACHE
       "id": "f2cbeb92f0a54d8cbd8c6c9b0491916a",
     },
   ],
-  "vars": {
-    // Non-secret environment variables go here
-  },
-  // Secrets (set via `wrangler secret put <NAME>`):
-  // - GITHUB_TOKEN: GitHub personal access token for code search API
+  "vars": {},
   "routes": [{ "pattern": "api.usedby.dev/*", "zone_name": "usedby.dev" }],
   "triggers": {
     "crons": ["0 4 * * *"],
