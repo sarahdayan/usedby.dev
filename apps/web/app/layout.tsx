@@ -1,18 +1,17 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, Space_Mono } from 'next/font/google';
+import { Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 
 import './globals.css';
 
-const spaceGrotesk = Space_Grotesk({
+const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
-  variable: '--font-space-grotesk',
+  variable: '--font-instrument-sans',
   display: 'swap',
 });
 
-const spaceMono = Space_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: '400',
-  variable: '--font-space-mono',
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -26,7 +25,7 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${spaceMono.variable}`}
+      className={`${instrumentSans.variable} ${jetbrainsMono.variable}`}
     >
       <body>{children}</body>
     </html>

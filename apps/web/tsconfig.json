@@ -5,7 +5,10 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@svg/*": ["../worker/src/svg/*"]
+    }
   },
   "include": [
     "**/*.ts",

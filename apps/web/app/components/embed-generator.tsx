@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 
 const VALID_PATTERN = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
 const DEFAULT_MAX = 35;
-const MAX_AVATARS = 35;
+const MAX_AVATARS = 40;
 
 function SegmentedControl<T extends string>({
   label,
@@ -133,7 +133,7 @@ export function EmbedGenerator() {
   }, [generated, htmlSnippet]);
 
   return (
-    <section className="py-section border-t border-border max-sm:py-20">
+    <section className="py-section border-t border-border">
       <p className="text-xs font-bold uppercase tracking-widest text-fg-muted mb-6">
         Try it
       </p>
@@ -144,7 +144,7 @@ export function EmbedGenerator() {
           onChange={(e) => setInput(e.target.value)}
           placeholder="react"
           aria-label="npm package name"
-          className="flex-1 bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl outline-none placeholder:text-fg-muted max-sm:text-[0.8125rem] max-sm:p-5"
+          className="flex-1 bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl outline-none placeholder:text-fg-muted focus-visible:ring-2 focus-visible:ring-fg/20 max-sm:text-[0.8125rem] max-sm:p-5"
         />
         <label className="flex items-center gap-2 bg-code-bg text-code-fg font-mono text-[0.9375rem] px-7 rounded-xl max-sm:text-[0.8125rem] max-sm:px-5">
           <span className="text-fg-muted">max</span>
@@ -155,14 +155,14 @@ export function EmbedGenerator() {
             onBlur={() => setMaxInput(String(clampMax(maxInput)))}
             min={1}
             max={MAX_AVATARS}
-            aria-label="Maximum number of avatars (1–35)"
+            aria-label="Maximum number of avatars (1–40)"
             className="w-12 bg-transparent outline-none text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </label>
         <button
           type="submit"
           disabled={!isValid}
-          className="bg-code-bg text-code-fg font-mono text-[0.9375rem] px-7 rounded-xl cursor-pointer disabled:cursor-default disabled:opacity-50 max-sm:text-[0.8125rem] max-sm:px-5"
+          className="bg-code-bg text-code-fg font-mono text-[0.9375rem] px-7 rounded-xl cursor-pointer disabled:cursor-default disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-fg/20 max-sm:text-[0.8125rem] max-sm:px-5"
         >
           Generate
         </button>
@@ -243,9 +243,7 @@ export function EmbedGenerator() {
           {generated ? (
             <>
               {!imageLoaded && !imageError && (
-                <div className="bg-code-bg rounded-xl h-92 flex items-center justify-center">
-                  <p className="text-sm text-fg-muted">Loading...</p>
-                </div>
+                <div className="bg-code-bg rounded-xl h-92 animate-pulse" />
               )}
               {imageError && (
                 <div className="bg-code-bg rounded-xl h-92 flex items-center justify-center">
