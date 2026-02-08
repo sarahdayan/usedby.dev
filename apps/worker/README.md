@@ -6,15 +6,15 @@ Cloudflare Worker that serves the embeddable image endpoint and handles the data
 
 ```mermaid
 flowchart TD
-    A[Incoming request\nGET /:platform/:package] --> B{KV cache?}
+    A["Incoming request<br/>GET /:platform/:package"] --> B{KV cache?}
     B -- Fresh --> C[Serve cached SVG]
     B -- Stale --> D[Serve stale SVG]
     D -- background --> E[Refresh pipeline]
     B -- Miss --> E
 
-    E --> F[Search\nGitHub code search\nfor package.json files]
-    F --> G[Enrich\nGitHub GraphQL API\n50 repos per request]
-    G --> H[Filter & Score\nRemove forks, archived,\nlow-star repos.\nRank by stars × recency]
+    E --> F["Search<br/>GitHub code search<br/>for package.json files"]
+    F --> G["Enrich<br/>GitHub GraphQL API<br/>50 repos per request"]
+    G --> H["Filter & Score<br/>Remove forks, archived,<br/>low-star repos.<br/>Rank by stars × recency"]
     H --> I[Fetch avatars]
     I --> J[Render SVG mosaic]
     J --> K[Write to KV cache]
