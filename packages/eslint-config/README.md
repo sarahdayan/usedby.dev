@@ -1,3 +1,3 @@
-# `@turbo/eslint-config`
+# `@usedby.dev/eslint-config`
 
-Collection of internal eslint configurations.
+Shared ESLint configuration for the usedby.dev monorepo.
