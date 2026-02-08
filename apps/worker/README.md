@@ -4,11 +4,21 @@ Cloudflare Worker that serves the embeddable image endpoint and handles the data
 
 ## How it works
 
-1. **Search** — Queries GitHub code search for `package.json` files mentioning the target package
-2. **Enrich** — Fetches real star counts, archive status, and avatars via GitHub GraphQL API (batched, 50 repos per request)
-3. **Filter & score** — Removes forks, archived repos, and low-star projects, then ranks by `stars * recency_multiplier`
-4. **Render** — Generates an SVG mosaic of dependent project avatars
-5. **Cache** — Stores results in KV with stale-while-revalidate (24h fresh, 30-day eviction)
+```mermaid
+flowchart TD
+    A[Incoming request\nGET /:platform/:package] --> B{KV cache?}
+    B -- Fresh --> C[Serve cached SVG]
+    B -- Stale --> D[Serve stale SVG]
+    D -- background --> E[Refresh pipeline]
+    B -- Miss --> E
+
+    E --> F[Search\nGitHub code search\nfor package.json files]
+    F --> G[Enrich\nGitHub GraphQL API\n50 repos per request]
+    G --> H[Filter & Score\nRemove forks, archived,\nlow-star repos.\nRank by stars × recency]
+    H --> I[Fetch avatars]
+    I --> J[Render SVG mosaic]
+    J --> K[Write to KV cache]
+```
 
 ## Endpoint
 
