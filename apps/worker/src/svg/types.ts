@@ -1,5 +1,6 @@
 export interface RenderOptions {
   max?: number;
+  style?: 'mosaic' | 'detailed';
 }
 
 export interface LayoutConfig {
@@ -21,6 +22,7 @@ export interface AvatarPosition {
 export interface AvatarData {
   dataUri: string;
   fullName: string;
+  stars?: number;
 }
 
 export interface AvatarFragment {

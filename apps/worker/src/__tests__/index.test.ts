@@ -13,6 +13,10 @@ vi.mock('../svg/render-mosaic', () => ({
   renderMosaic: vi.fn(),
 }));
 
+vi.mock('../svg/render-detailed', () => ({
+  renderDetailed: vi.fn(),
+}));
+
 vi.mock('../svg/render-message', () => ({
   renderMessage: vi.fn(),
 }));
@@ -349,6 +353,81 @@ describe('worker', () => {
         expect(getDependents).not.toHaveBeenCalled();
       }
     );
+  });
+
+  describe('style validation', () => {
+    it('returns 400 for invalid style value', async () => {
+      const response = await worker.fetch(
+        createRequest('/npm/react?style=invalid'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.text()).toBe('Invalid style parameter');
+      expect(getDependents).not.toHaveBeenCalled();
+    });
+
+    it('accepts style=detailed', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      const response = await worker.fetch(
+        createRequest('/npm/react?style=detailed'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ style: 'detailed' })
+      );
+    });
+
+    it('accepts style=mosaic', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      const response = await worker.fetch(
+        createRequest('/npm/react?style=mosaic'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ style: 'mosaic' })
+      );
+    });
+
+    it('passes undefined style when param is absent', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
+
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ style: undefined })
+      );
+    });
   });
 
   describe('method restriction', () => {

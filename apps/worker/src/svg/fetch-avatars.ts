@@ -28,6 +28,7 @@ async function fetchOne(repo: ScoredRepo): Promise<AvatarData> {
   return {
     dataUri: `data:${contentType};base64,${base64}`,
     fullName: repo.fullName,
+    stars: repo.stars,
   };
 }
 

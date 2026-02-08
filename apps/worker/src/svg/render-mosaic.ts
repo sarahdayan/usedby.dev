@@ -1,6 +1,7 @@
 import { DEFAULT_MAX, MAX_AVATARS } from './constants';
 import { renderAvatar } from './avatar';
 import { computeLayout, computePositions } from './layout';
+import { renderDetailed } from './render-detailed';
 import { renderMessage } from './render-message';
 import type { AvatarData, RenderOptions } from './types';
 
@@ -18,6 +19,10 @@ export function renderMosaic(
 
   if (sliced.length === 0) {
     return renderMessage('No dependents found');
+  }
+
+  if (options?.style === 'detailed') {
+    return renderDetailed(sliced);
   }
 
   const layout = computeLayout(sliced.length);

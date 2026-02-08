@@ -84,6 +84,20 @@ export default {
       max = parsed;
     }
 
+    const styleParam = url.searchParams.get('style');
+    let style: 'mosaic' | 'detailed' | undefined;
+
+    if (styleParam !== null) {
+      if (styleParam !== 'mosaic' && styleParam !== 'detailed') {
+        return new Response('Invalid style parameter', {
+          status: 400,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+
+      style = styleParam;
+    }
+
     const isDev = env.DEV === 'true';
     const logger = new DevLogger(isDev);
     const limits = getLimits(isDev);
@@ -108,7 +122,7 @@ export default {
       logger.timeEnd('avatars');
       logger.log('avatars', `${avatars.length} fetched`);
 
-      const svg = renderMosaic(avatars);
+      const svg = renderMosaic(avatars, { style });
 
       logger.timeEnd('total');
       logger.summary();

@@ -68,6 +68,7 @@ describe('fetchAvatars', () => {
     expect(avatars[0]).toEqual({
       dataUri: expect.stringMatching(/^data:image\/png;base64,/),
       fullName: 'test/alpha',
+      stars: 100,
     });
   });
 

@@ -1,6 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { renderMosaic } from '../render-mosaic';
 import type { AvatarData } from '../types';
+
+vi.mock('../render-detailed', () => ({
+  renderDetailed: vi.fn(() => '<svg>detailed</svg>'),
+}));
+
+import { renderDetailed } from '../render-detailed';
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 function createAvatars(count: number): AvatarData[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -150,5 +160,44 @@ describe('renderMosaic', () => {
     // height = 15*64 + 14*12 = 960 + 168 = 1128
     expect(svg).toContain('width="520"');
     expect(svg).toContain('height="1128"');
+  });
+
+  it('delegates to renderDetailed when style is detailed', () => {
+    const avatars = createAvatars(5);
+    const svg = renderMosaic(avatars, { style: 'detailed' });
+
+    expect(renderDetailed).toHaveBeenCalledWith(avatars);
+    expect(svg).toBe('<svg>detailed</svg>');
+  });
+
+  it('uses default mosaic renderer when style is mosaic', () => {
+    const svg = renderMosaic(createAvatars(5), { style: 'mosaic' });
+
+    expect(renderDetailed).not.toHaveBeenCalled();
+    expect(svg).toContain('<image ');
+  });
+
+  it('uses default mosaic renderer when style is absent', () => {
+    const svg = renderMosaic(createAvatars(5));
+
+    expect(renderDetailed).not.toHaveBeenCalled();
+    expect(svg).toContain('<image ');
+  });
+
+  it('still applies max before delegating to detailed', () => {
+    renderMosaic(createAvatars(20), { style: 'detailed', max: 10 });
+
+    const call = vi.mocked(renderDetailed).mock.calls[0]!;
+    expect(call[0]).toHaveLength(10);
+    expect(call[0]![0]).toEqual(
+      expect.objectContaining({ fullName: 'org/repo-0' })
+    );
+  });
+
+  it('returns message for empty input even with detailed style', () => {
+    const svg = renderMosaic([], { style: 'detailed' });
+
+    expect(svg).toContain('No dependents found');
+    expect(renderDetailed).not.toHaveBeenCalled();
   });
 });
