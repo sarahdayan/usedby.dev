@@ -2,7 +2,6 @@ import { getDependents } from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
 import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
-import { DEFAULT_MAX } from './svg/constants';
 import { fetchAvatars } from './svg/fetch-avatars';
 import { renderMessage } from './svg/render-message';
 import { renderMosaic } from './svg/render-mosaic';
@@ -150,7 +149,7 @@ export default {
 
       const sorted =
         sort === 'stars' ? [...repos].sort((a, b) => b.stars - a.stars) : repos;
-      const displayRepos = sorted.slice(0, max ?? DEFAULT_MAX);
+      const displayRepos = sorted.slice(0, max ?? limits.defaultMax);
 
       logger.time('avatars');
       const avatars = await fetchAvatars(displayRepos);

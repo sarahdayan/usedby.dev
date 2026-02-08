@@ -1,5 +1,3 @@
-export const DEFAULT_MAX = 35;
-export const MAX_AVATARS = 100;
 export const COLUMNS = 10;
 export const AVATAR_SIZE = 70;
 export const GAP = 12;

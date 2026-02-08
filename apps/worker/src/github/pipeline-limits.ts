@@ -9,6 +9,8 @@ export interface PipelineLimits {
   pageDelayMs: number;
   /** Minimum star count to survive post-enrichment filtering. */
   minStars: number;
+  /** Default number of dependents to display (each avatar = 1 subrequest). */
+  defaultMax: number;
 }
 
 /** Cloudflare Workers free plan: 50 subrequests/request.
@@ -19,6 +21,7 @@ export const PROD_LIMITS: PipelineLimits = {
   batchSize: 50,
   pageDelayMs: 6_500,
   minStars: 5,
+  defaultMax: 35,
 };
 
 /** Local dev (wrangler dev): no subrequest limit, only GitHub rate limit (5k/hr). */
@@ -28,6 +31,7 @@ export const DEV_LIMITS: PipelineLimits = {
   batchSize: 50,
   pageDelayMs: 2_000,
   minStars: 5,
+  defaultMax: 100,
 };
 
 export function getLimits(dev: boolean): PipelineLimits {

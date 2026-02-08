@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 
 const VALID_PATTERN = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
 const DEFAULT_MAX = 35;
-const MAX_AVATARS = 100;
+const MAX_AVATARS = 35;
 
 function normalize(value: string) {
   return value.trim();
@@ -97,7 +97,7 @@ export function EmbedGenerator() {
             onBlur={() => setMaxInput(String(clampMax(maxInput)))}
             min={1}
             max={MAX_AVATARS}
-            aria-label="Maximum number of avatars (1–100)"
+            aria-label="Maximum number of avatars (1–35)"
             className="w-12 bg-transparent outline-none text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </label>

@@ -1,4 +1,3 @@
-import { DEFAULT_MAX, MAX_AVATARS } from './constants';
 import { renderAvatar } from './avatar';
 import { computeLayout, computePositions } from './layout';
 import { renderDetailed } from './render-detailed';
@@ -9,26 +8,18 @@ export function renderMosaic(
   avatars: AvatarData[],
   options?: RenderOptions
 ): string {
-  const rawMax = options?.max ?? DEFAULT_MAX;
-  const max =
-    Number.isFinite(rawMax) && rawMax > 0
-      ? Math.min(Math.floor(rawMax), MAX_AVATARS)
-      : DEFAULT_MAX;
-
-  const sliced = avatars.slice(0, max);
-
-  if (sliced.length === 0) {
+  if (avatars.length === 0) {
     return renderMessage('No dependents found', options?.theme);
   }
 
   if (options?.style === 'detailed') {
-    return renderDetailed(sliced, options?.theme);
+    return renderDetailed(avatars, options?.theme);
   }
 
-  const layout = computeLayout(sliced.length);
-  const positions = computePositions(sliced.length, layout);
+  const layout = computeLayout(avatars.length);
+  const positions = computePositions(avatars.length, layout);
 
-  const fragments = sliced.map((avatar, i) =>
+  const fragments = avatars.map((avatar, i) =>
     renderAvatar(avatar, positions[i]!, layout.avatarSize)
   );
 

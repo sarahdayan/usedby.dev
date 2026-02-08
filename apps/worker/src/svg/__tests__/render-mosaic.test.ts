@@ -39,69 +39,11 @@ describe('renderMosaic', () => {
     expect(svg).toMatch(/<\/svg>$/);
   });
 
-  it('defaults to 35 avatars', () => {
+  it('renders all avatars passed in', () => {
     const svg = renderMosaic(createAvatars(50));
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
-    expect(imageCount).toBe(35);
-  });
-
-  it('respects a custom max', () => {
-    const svg = renderMosaic(createAvatars(50), { max: 10 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(10);
-  });
-
-  it('caps max at 100', () => {
-    const svg = renderMosaic(createAvatars(150), { max: 150 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(100);
-  });
-
-  it('falls back to default for max=0', () => {
-    const svg = renderMosaic(createAvatars(50), { max: 0 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(35);
-  });
-
-  it('falls back to default for negative max', () => {
-    const svg = renderMosaic(createAvatars(50), { max: -5 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(35);
-  });
-
-  it('falls back to default for NaN', () => {
-    const svg = renderMosaic(createAvatars(50), { max: NaN });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(35);
-  });
-
-  it('falls back to default for Infinity', () => {
-    const svg = renderMosaic(createAvatars(50), { max: Infinity });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(35);
-  });
-
-  it('floors floating-point max values', () => {
-    const svg = renderMosaic(createAvatars(50), { max: 10.7 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(10);
-  });
-
-  it('renders exactly one avatar with max=1', () => {
-    const svg = renderMosaic(createAvatars(10), { max: 1 });
-    const imageCount = (svg.match(/<image /g) ?? []).length;
-
-    expect(imageCount).toBe(1);
-    expect(svg).toContain('width="70"');
-    expect(svg).toContain('height="70"');
+    expect(imageCount).toBe(50);
   });
 
   it('returns message SVG for empty input', () => {
@@ -158,7 +100,7 @@ describe('renderMosaic', () => {
   });
 
   it('computes correct dimensions for 100 avatars', () => {
-    const svg = renderMosaic(createAvatars(100), { max: 100 });
+    const svg = renderMosaic(createAvatars(100));
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
     expect(imageCount).toBe(100);
@@ -189,16 +131,6 @@ describe('renderMosaic', () => {
 
     expect(renderDetailed).not.toHaveBeenCalled();
     expect(svg).toContain('<image ');
-  });
-
-  it('still applies max before delegating to detailed', () => {
-    renderMosaic(createAvatars(20), { style: 'detailed', max: 10 });
-
-    const call = vi.mocked(renderDetailed).mock.calls[0]!;
-    expect(call[0]).toHaveLength(10);
-    expect(call[0]![0]).toEqual(
-      expect.objectContaining({ fullName: 'org/repo-0' })
-    );
   });
 
   it('returns message for empty input even with detailed style', () => {
