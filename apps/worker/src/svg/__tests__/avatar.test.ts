@@ -54,6 +54,14 @@ describe('renderAvatar', () => {
     expect(body).toContain('clip-path="url(#clip-5)"');
   });
 
+  it('includes a border circle with avatar-border class', () => {
+    const { body } = renderAvatar(avatar, position, avatarSize);
+
+    expect(body).toContain(
+      '<circle cx="32" cy="32" r="32" fill="none" class="avatar-border"/>'
+    );
+  });
+
   it('escapes special characters in repo names', () => {
     const special: AvatarData = {
       dataUri: 'data:image/png;base64,abc',

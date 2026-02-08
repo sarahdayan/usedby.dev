@@ -1,7 +1,7 @@
 export const COLUMNS = 10;
 export const AVATAR_SIZE = 70;
 export const GAP = 12;
-export const PADDING = 0;
+export const PADDING = 1;
 export const AVATAR_FETCH_SIZE = 80;
 export const FETCH_CONCURRENCY = 10;
 

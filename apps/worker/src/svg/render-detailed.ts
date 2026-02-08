@@ -7,6 +7,7 @@ import {
   DETAILED_GAP_Y,
   DETAILED_NAME_MAX_CHARS,
   DETAILED_TEXT_GAP,
+  PADDING,
 } from './constants';
 import { escapeXml } from './avatar';
 import type { Theme } from './theme';
@@ -49,8 +50,12 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
 
   const columns = Math.min(DETAILED_COLUMNS, avatars.length);
   const rows = Math.ceil(avatars.length / columns);
-  const width = columns * DETAILED_CARD_WIDTH + (columns - 1) * DETAILED_GAP_X;
-  const height = rows * DETAILED_CARD_HEIGHT + (rows - 1) * DETAILED_GAP_Y;
+  const width =
+    PADDING * 2 +
+    columns * DETAILED_CARD_WIDTH +
+    (columns - 1) * DETAILED_GAP_X;
+  const height =
+    PADDING * 2 + rows * DETAILED_CARD_HEIGHT + (rows - 1) * DETAILED_GAP_Y;
 
   const defs: string[] = [];
   const bodies: string[] = [];
@@ -59,8 +64,8 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
     const avatar = avatars[i]!;
     const col = i % columns;
     const row = Math.floor(i / columns);
-    const x = col * (DETAILED_CARD_WIDTH + DETAILED_GAP_X);
-    const y = row * (DETAILED_CARD_HEIGHT + DETAILED_GAP_Y);
+    const x = PADDING + col * (DETAILED_CARD_WIDTH + DETAILED_GAP_X);
+    const y = PADDING + row * (DETAILED_CARD_HEIGHT + DETAILED_GAP_Y);
 
     const clipId = `clip-${i}`;
     const radius = DETAILED_AVATAR_SIZE / 2;
@@ -86,6 +91,7 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
       [
         `<a href="${href}">`,
         `<image href="${escapeXml(avatar.dataUri)}" x="${imgX}" y="${imgY}" width="${DETAILED_AVATAR_SIZE}" height="${DETAILED_AVATAR_SIZE}" clip-path="url(#${clipId})"/>`,
+        `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" class="avatar-border"/>`,
         `<text x="${textX}" y="${y + 28}" class="text-primary" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">`,
         `${escapedName}</text>`,
         `<text x="${textX}" y="${y + 46}" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="12">`,

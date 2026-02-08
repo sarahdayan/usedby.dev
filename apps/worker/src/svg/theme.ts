@@ -7,20 +7,22 @@ export function renderThemeStyle(theme: Theme | undefined): string {
   const resolved = theme ?? 'auto';
 
   if (resolved === 'light') {
-    return `<style>.text-primary{fill:${LIGHT.primary}}.text-secondary{fill:${LIGHT.secondary}}</style>`;
+    return `<style>.text-primary{fill:${LIGHT.primary}}.text-secondary{fill:${LIGHT.secondary}}.avatar-border{stroke:transparent;stroke-width:2}</style>`;
   }
 
   if (resolved === 'dark') {
-    return `<style>.text-primary{fill:${DARK.primary}}.text-secondary{fill:${DARK.secondary}}</style>`;
+    return `<style>.text-primary{fill:${DARK.primary}}.text-secondary{fill:${DARK.secondary}}.avatar-border{stroke:rgba(255,255,255,0.4);stroke-width:2}</style>`;
   }
 
   return [
     '<style>',
     `.text-primary{fill:${LIGHT.primary}}`,
     `.text-secondary{fill:${LIGHT.secondary}}`,
+    '.avatar-border{stroke:transparent;stroke-width:2}',
     `@media(prefers-color-scheme:dark){`,
     `.text-primary{fill:${DARK.primary}}`,
     `.text-secondary{fill:${DARK.secondary}}`,
+    '.avatar-border{stroke:rgba(255,255,255,0.4);stroke-width:2}',
     '}',
     '</style>',
   ].join('');

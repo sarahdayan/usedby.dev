@@ -2,6 +2,7 @@ import { renderAvatar } from './avatar';
 import { computeLayout, computePositions } from './layout';
 import { renderDetailed } from './render-detailed';
 import { renderMessage } from './render-message';
+import { renderThemeStyle } from './theme';
 import type { AvatarData, RenderOptions } from './types';
 
 export function renderMosaic(
@@ -25,6 +26,7 @@ export function renderMosaic(
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="Dependents">`,
+    renderThemeStyle(options?.theme),
     `<defs>${fragments.map((f) => f.def).join('')}</defs>`,
     fragments.map((f) => f.body).join(''),
     '</svg>',

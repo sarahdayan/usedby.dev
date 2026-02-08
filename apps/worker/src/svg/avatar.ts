@@ -22,6 +22,6 @@ export function renderAvatar(
 
   return {
     def: `<clipPath id="${clipId}"><circle cx="${position.cx}" cy="${position.cy}" r="${radius}"/></clipPath>`,
-    body: `<a href="${href}"><image href="${escapeXml(avatar.dataUri)}" x="${x}" y="${y}" width="${avatarSize}" height="${avatarSize}" clip-path="url(#${clipId})"/></a>`,
+    body: `<a href="${href}"><image href="${escapeXml(avatar.dataUri)}" x="${x}" y="${y}" width="${avatarSize}" height="${avatarSize}" clip-path="url(#${clipId})"/><circle cx="${position.cx}" cy="${position.cy}" r="${radius}" fill="none" class="avatar-border"/></a>`,
   };
 }

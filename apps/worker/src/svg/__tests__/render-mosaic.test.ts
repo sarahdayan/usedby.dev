@@ -83,10 +83,10 @@ describe('renderMosaic', () => {
   it('sets correct dimensions for the SVG', () => {
     const svg = renderMosaic(createAvatars(35));
 
-    // 10 cols × 70 + 9 × 12 = 808, ceil(35/10) = 4 rows: 4 × 70 + 3 × 12 = 316
-    expect(svg).toContain('width="808"');
-    expect(svg).toContain('height="316"');
-    expect(svg).toContain('viewBox="0 0 808 316"');
+    // 1*2 + 10*70 + 9*12 = 810, 1*2 + 4*70 + 3*12 = 318
+    expect(svg).toContain('width="810"');
+    expect(svg).toContain('height="318"');
+    expect(svg).toContain('viewBox="0 0 810 318"');
   });
 
   it('renders a single avatar with correct dimensions', () => {
@@ -94,9 +94,9 @@ describe('renderMosaic', () => {
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
     expect(imageCount).toBe(1);
-    expect(svg).toContain('width="70"');
-    expect(svg).toContain('height="70"');
-    expect(svg).toContain('viewBox="0 0 70 70"');
+    expect(svg).toContain('width="72"');
+    expect(svg).toContain('height="72"');
+    expect(svg).toContain('viewBox="0 0 72 72"');
   });
 
   it('computes correct dimensions for 100 avatars', () => {
@@ -105,10 +105,10 @@ describe('renderMosaic', () => {
 
     expect(imageCount).toBe(100);
     // 100 avatars: 10 cols, ceil(100/10) = 10 rows
-    // width = 10*70 + 9*12 = 808
-    // height = 10*70 + 9*12 = 808
-    expect(svg).toContain('width="808"');
-    expect(svg).toContain('height="808"');
+    // width = 1*2 + 10*70 + 9*12 = 810
+    // height = 1*2 + 10*70 + 9*12 = 810
+    expect(svg).toContain('width="810"');
+    expect(svg).toContain('height="810"');
   });
 
   it('delegates to renderDetailed when style is detailed', () => {
@@ -154,5 +154,12 @@ describe('renderMosaic', () => {
     renderMosaic([], { theme: 'dark' });
 
     expect(renderMessage).toHaveBeenCalledWith('No dependents found', 'dark');
+  });
+
+  it('includes a style block', () => {
+    const svg = renderMosaic(createAvatars(5));
+
+    expect(svg).toContain('<style>');
+    expect(svg).toContain('</style>');
   });
 });

@@ -36,4 +36,31 @@ describe('renderThemeStyle', () => {
     expect(style).toContain('.text-primary{fill:#1f2328}');
     expect(style).toContain('.text-primary{fill:#e6edf3}');
   });
+
+  it('includes avatar-border with stroke:none for light', () => {
+    const style = renderThemeStyle('light');
+
+    expect(style).toContain(
+      '.avatar-border{stroke:transparent;stroke-width:2}'
+    );
+  });
+
+  it('includes avatar-border with white stroke for dark', () => {
+    const style = renderThemeStyle('dark');
+
+    expect(style).toContain(
+      '.avatar-border{stroke:rgba(255,255,255,0.4);stroke-width:2}'
+    );
+  });
+
+  it('includes avatar-border in both default and dark media query for auto', () => {
+    const style = renderThemeStyle('auto');
+
+    expect(style).toContain(
+      '.avatar-border{stroke:transparent;stroke-width:2}'
+    );
+    expect(style).toContain(
+      '.avatar-border{stroke:rgba(255,255,255,0.4);stroke-width:2}'
+    );
+  });
 });

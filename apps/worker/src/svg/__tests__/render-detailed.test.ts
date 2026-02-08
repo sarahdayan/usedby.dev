@@ -88,26 +88,26 @@ describe('renderDetailed', () => {
   it('renders 3-column layout', () => {
     const svg = renderDetailed(createAvatars(3));
 
-    // 3 cards × 260px + 2 × 12px gap = 804
-    expect(svg).toContain('width="804"');
-    // 1 row × 64px = 64
-    expect(svg).toContain('height="64"');
+    // 1*2 + 3*260 + 2*12 = 806
+    expect(svg).toContain('width="806"');
+    // 1*2 + 64 = 66
+    expect(svg).toContain('height="66"');
   });
 
   it('computes correct dimensions for multiple rows', () => {
     const svg = renderDetailed(createAvatars(9));
 
-    // 3 columns × 260 + 2 × 12 = 804
-    expect(svg).toContain('width="804"');
-    // ceil(9/3) = 3 rows: 3 × 64 + 2 × 12 = 216
-    expect(svg).toContain('height="216"');
+    // 1*2 + 3*260 + 2*12 = 806
+    expect(svg).toContain('width="806"');
+    // 1*2 + 3*64 + 2*12 = 218
+    expect(svg).toContain('height="218"');
   });
 
   it('uses fewer columns when fewer avatars', () => {
     const svg = renderDetailed(createAvatars(2));
 
-    // 2 columns × 260 + 1 × 12 = 532
-    expect(svg).toContain('width="532"');
+    // 1*2 + 2*260 + 12 = 534
+    expect(svg).toContain('width="534"');
   });
 
   it('renders one image per avatar', () => {
@@ -214,8 +214,8 @@ describe('renderDetailed', () => {
   it('renders a single avatar correctly', () => {
     const svg = renderDetailed(createAvatars(1));
 
-    expect(svg).toContain('width="260"');
-    expect(svg).toContain('height="64"');
+    expect(svg).toContain('width="262"');
+    expect(svg).toContain('height="66"');
     const imageCount = (svg.match(/<image /g) ?? []).length;
     expect(imageCount).toBe(1);
   });
@@ -231,5 +231,13 @@ describe('renderDetailed', () => {
 
     expect(svg).toContain('<clipPath id="clip-0">');
     expect(svg).toContain('r="32"');
+  });
+
+  it('includes a border circle with avatar-border class', () => {
+    const svg = renderDetailed(createAvatars(1));
+
+    expect(svg).toContain(
+      '<circle cx="33" cy="33" r="32" fill="none" class="avatar-border"/>'
+    );
   });
 });
