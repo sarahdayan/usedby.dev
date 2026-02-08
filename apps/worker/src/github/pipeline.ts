@@ -19,12 +19,19 @@ export async function refreshDependents(
 
   // Filter forks before enrichment (reliably available from search).
   // Star counts from code search are often 0, so we defer that filter.
-  const preFiltered = searchResult.repos.filter((repo) => !repo.isFork);
-  const forksRemoved = searchResult.repos.length - preFiltered.length;
+  const forks: string[] = [];
+  const preFiltered = searchResult.repos.filter((repo) => {
+    if (repo.isFork) {
+      forks.push(repo.fullName);
+      return false;
+    }
+    return true;
+  });
   logger?.log(
     'pre-filter',
-    `${searchResult.repos.length} \u2192 ${preFiltered.length} (removed ${forksRemoved} forks)`
+    `${searchResult.repos.length} \u2192 ${preFiltered.length} (removed ${forks.length} forks)`
   );
+  if (forks.length > 0) logger?.log('  forks', forks.join(', '));
 
   const capped = preFiltered.slice(0, ENRICH_CAP);
 
@@ -34,11 +41,7 @@ export async function refreshDependents(
   logger?.timeEnd('enrich');
 
   // Now filter with real data from enrichment, then score.
-  const filtered = filterDependents(enrichResult.repos);
-  logger?.log(
-    'filter',
-    `${enrichResult.repos.length} \u2192 ${filtered.length}`
-  );
+  const filtered = filterDependents(enrichResult.repos, logger);
 
   const scored = scoreDependents(filtered, now);
   logger?.log('score', `${scored.length} repos`);

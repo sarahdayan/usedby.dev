@@ -16,6 +16,7 @@ export async function enrichRepos(
 
   const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
   const enriched: DependentRepo[] = [];
+  const nullRepos: string[] = [];
 
   for (let i = 0; i < repos.length; i += BATCH_SIZE) {
     const batch = repos.slice(i, i + BATCH_SIZE);
@@ -42,6 +43,7 @@ export async function enrichRepos(
       const result = data[`repo_${j}`];
 
       if (result == null) {
+        nullRepos.push(batch[j]!.fullName);
         continue;
       }
 
@@ -59,11 +61,11 @@ export async function enrichRepos(
   }
 
   const batchCount = Math.ceil(repos.length / BATCH_SIZE);
-  const nullSkipped = repos.length - enriched.length;
   logger?.log(
     'enrich',
-    `${repos.length} \u2192 ${enriched.length} (${batchCount} batches${nullSkipped > 0 ? `, ${nullSkipped} null` : ''})`
+    `${repos.length} \u2192 ${enriched.length} (${batchCount} batches${nullRepos.length > 0 ? `, ${nullRepos.length} null` : ''})`
   );
+  if (nullRepos.length > 0) logger?.log('  null', nullRepos.join(', '));
 
   return { repos: enriched, rateLimited: false };
 }
