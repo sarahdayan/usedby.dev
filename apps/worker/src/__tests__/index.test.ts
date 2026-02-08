@@ -147,11 +147,7 @@ describe('worker', () => {
       vi.mocked(fetchAvatars).mockResolvedValue([]);
       vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
 
-      await worker.fetch(
-        createRequest('/npm/react'),
-        createEnv(),
-        createCtx()
-      );
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
 
       expect(renderMosaic).toHaveBeenCalledWith([], { max: undefined });
     });

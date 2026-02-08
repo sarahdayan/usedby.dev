@@ -46,7 +46,9 @@ export default {
 
     if (
       !platform ||
-      !SUPPORTED_PLATFORMS.includes(platform as (typeof SUPPORTED_PLATFORMS)[number])
+      !SUPPORTED_PLATFORMS.includes(
+        platform as (typeof SUPPORTED_PLATFORMS)[number]
+      )
     ) {
       return new Response('Not found', {
         status: 404,
