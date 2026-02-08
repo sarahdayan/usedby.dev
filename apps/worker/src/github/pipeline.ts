@@ -4,7 +4,7 @@ import { filterDependents } from './filter-dependents';
 import { scoreDependents } from './score-dependents';
 import { searchDependents } from './search-dependents';
 
-const ENRICH_CAP = 20;
+const ENRICH_CAP = 100;
 
 export async function refreshDependents(
   packageName: string,

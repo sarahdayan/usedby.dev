@@ -1,63 +1,38 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { enrichRepos } from '../enrich-repos';
-import { sleep } from '../rate-limit';
 import type { DependentRepo } from '../types';
-
-vi.mock('../rate-limit', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../rate-limit')>();
-
-  return {
-    ...actual,
-    sleep: vi.fn(),
-  };
-});
 
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => {
-  server.resetHandlers();
-  vi.clearAllMocks();
-});
+afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('enrichRepos', () => {
   it('enriches repos with accurate metadata', async () => {
     server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
-        return HttpResponse.json(
-          createRepoResponse({
-            fullName: 'acme/app',
-            stars: 5000,
-            pushedAt: '2025-06-01T00:00:00Z',
-            avatarUrl: 'https://avatars.githubusercontent.com/u/99',
-            isFork: false,
-            archived: false,
-          })
-        );
-      }),
-      http.get('https://api.github.com/repos/corp/lib', () => {
-        return HttpResponse.json(
-          createRepoResponse({
-            fullName: 'corp/lib',
-            stars: 1200,
-            pushedAt: '2025-05-15T00:00:00Z',
-            avatarUrl: 'https://avatars.githubusercontent.com/u/42',
-            isFork: true,
-            archived: true,
-          })
-        );
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({
+              stargazerCount: 5000,
+              pushedAt: '2025-06-01T00:00:00Z',
+              avatarUrl: 'https://avatars.githubusercontent.com/u/99',
+              isFork: false,
+              isArchived: false,
+            }),
+            repo_1: createGraphQLRepo({
+              stargazerCount: 1200,
+              pushedAt: '2025-05-15T00:00:00Z',
+              avatarUrl: 'https://avatars.githubusercontent.com/u/42',
+              isFork: true,
+              isArchived: true,
+            }),
+          },
+        });
       })
     );
 
@@ -91,15 +66,15 @@ describe('enrichRepos', () => {
     ]);
   });
 
-  it('skips 404 repos', async () => {
+  it('skips null repos (deleted/private)', async () => {
     server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
-        return HttpResponse.json(
-          createRepoResponse({ fullName: 'acme/app', stars: 500 })
-        );
-      }),
-      http.get('https://api.github.com/repos/deleted/repo', () => {
-        return HttpResponse.json({ message: 'Not Found' }, { status: 404 });
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({ stargazerCount: 500 }),
+            repo_1: null,
+          },
+        });
       })
     );
 
@@ -120,186 +95,94 @@ describe('enrichRepos', () => {
     expect(result.rateLimited).toBe(false);
   });
 
-  it('processes multiple batches', async () => {
-    const repoNames = Array.from({ length: 15 }, (_, i) => `org/repo-${i}`);
+  it('processes multiple batches (>50 repos)', async () => {
+    let requestCount = 0;
 
     server.use(
-      http.get('https://api.github.com/repos/:owner/:repo', ({ params }) => {
-        const fullName = `${params.owner}/${params.repo}`;
+      http.post('https://api.github.com/graphql', async ({ request }) => {
+        requestCount++;
+        const body = (await request.json()) as { query: string };
 
-        return HttpResponse.json(createRepoResponse({ fullName, stars: 100 }));
-      })
-    );
+        const data: Record<string, object> = {};
+        const matches = body.query.matchAll(/repo_(\d+)/g);
 
-    const result = await enrichRepos(repoNames.map(createSkeletonRepo), {
-      GITHUB_TOKEN: 'fake-token',
-    });
-
-    expect(result.repos).toHaveLength(15);
-    expect(result.rateLimited).toBe(false);
-  });
-
-  it('returns partial results on rate limit exhaustion', async () => {
-    let callCount = 0;
-
-    server.use(
-      http.get('https://api.github.com/repos/:owner/:repo', () => {
-        callCount++;
-
-        // First 10 succeed (batch 1), then rate limit on batch 2
-        if (callCount <= 10) {
-          return HttpResponse.json(
-            createRepoResponse({
-              fullName: `org/repo-${callCount}`,
-              stars: 100,
-            })
-          );
+        for (const match of matches) {
+          const idx = match[1];
+          data[`repo_${idx}`] = createGraphQLRepo({ stargazerCount: 100 });
         }
 
-        return HttpResponse.json(
-          { message: 'rate limit exceeded' },
-          {
-            status: 403,
-            headers: { 'x-ratelimit-remaining': '0' },
-          }
-        );
+        return HttpResponse.json({ data });
       })
     );
 
-    const repos = Array.from({ length: 15 }, (_, i) =>
+    const repos = Array.from({ length: 75 }, (_, i) =>
       createSkeletonRepo(`org/repo-${i}`)
     );
 
     const result = await enrichRepos(repos, { GITHUB_TOKEN: 'fake-token' });
 
-    expect(result.repos).toHaveLength(10);
-    expect(result.rateLimited).toBe(true);
-  });
-
-  it('retries on primary rate limit and succeeds', async () => {
-    let callCount = 0;
-
-    server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
-        callCount++;
-
-        if (callCount === 1) {
-          return HttpResponse.json(
-            { message: 'rate limit exceeded' },
-            {
-              status: 403,
-              headers: {
-                'x-ratelimit-remaining': '0',
-                'x-ratelimit-reset': '1700000000',
-              },
-            }
-          );
-        }
-
-        return HttpResponse.json(
-          createRepoResponse({ fullName: 'acme/app', stars: 500 })
-        );
-      })
-    );
-
-    const result = await enrichRepos([createSkeletonRepo('acme/app')], {
-      GITHUB_TOKEN: 'fake-token',
-    });
-
-    expect(callCount).toBe(2);
-    expect(result.repos).toHaveLength(1);
-    expect(result.repos[0]!.stars).toBe(500);
+    expect(requestCount).toBe(2);
+    expect(result.repos).toHaveLength(75);
     expect(result.rateLimited).toBe(false);
-    expect(sleep).toHaveBeenCalledTimes(1);
   });
 
-  it('retries on secondary rate limit (retry-after) and succeeds', async () => {
-    let callCount = 0;
+  it('returns partial results on rate limit (RATE_LIMITED error type)', async () => {
+    let requestCount = 0;
 
     server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
-        callCount++;
+      http.post('https://api.github.com/graphql', () => {
+        requestCount++;
 
-        if (callCount === 1) {
-          return HttpResponse.json(
-            { message: 'secondary rate limit' },
-            {
-              status: 403,
-              headers: { 'retry-after': '30' },
-            }
-          );
+        if (requestCount === 1) {
+          const data: Record<string, object> = {};
+
+          for (let i = 0; i < 50; i++) {
+            data[`repo_${i}`] = createGraphQLRepo({ stargazerCount: 100 });
+          }
+
+          return HttpResponse.json({ data });
         }
 
-        return HttpResponse.json(
-          createRepoResponse({ fullName: 'acme/app', stars: 500 })
-        );
+        return HttpResponse.json({
+          errors: [{ type: 'RATE_LIMITED', message: 'rate limited' }],
+        });
       })
     );
 
-    const result = await enrichRepos([createSkeletonRepo('acme/app')], {
-      GITHUB_TOKEN: 'fake-token',
-    });
-
-    expect(callCount).toBe(2);
-    expect(result.repos).toHaveLength(1);
-    expect(result.rateLimited).toBe(false);
-    expect(sleep).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips multiple 404s within a batch', async () => {
-    server.use(
-      http.get('https://api.github.com/repos/:owner/:repo', ({ params }) => {
-        const fullName = `${params.owner}/${params.repo}`;
-
-        if (
-          fullName === 'gone/one' ||
-          fullName === 'gone/two' ||
-          fullName === 'gone/three'
-        ) {
-          return HttpResponse.json({ message: 'Not Found' }, { status: 404 });
-        }
-
-        return HttpResponse.json(createRepoResponse({ fullName, stars: 100 }));
-      })
+    const repos = Array.from({ length: 75 }, (_, i) =>
+      createSkeletonRepo(`org/repo-${i}`)
     );
-
-    const repos = [
-      'org/a',
-      'gone/one',
-      'org/b',
-      'gone/two',
-      'org/c',
-      'gone/three',
-      'org/d',
-      'org/e',
-      'org/f',
-      'org/g',
-    ].map(createSkeletonRepo);
 
     const result = await enrichRepos(repos, { GITHUB_TOKEN: 'fake-token' });
 
-    expect(result.repos).toHaveLength(7);
-    expect(result.repos.map((r) => r.fullName)).toEqual([
-      'org/a',
-      'org/b',
-      'org/c',
-      'org/d',
-      'org/e',
-      'org/f',
-      'org/g',
-    ]);
-    expect(result.rateLimited).toBe(false);
+    expect(result.repos).toHaveLength(50);
+    expect(result.rateLimited).toBe(true);
   });
 
-  it('returns partial results when retries are exhausted within a batch', async () => {
+  it('returns partial results on HTTP 403 rate limit', async () => {
     server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
+      http.post('https://api.github.com/graphql', () => {
         return HttpResponse.json(
           { message: 'rate limit exceeded' },
-          {
-            status: 403,
-            headers: { 'x-ratelimit-remaining': '0' },
-          }
+          { status: 403 }
+        );
+      })
+    );
+
+    const result = await enrichRepos([createSkeletonRepo('acme/app')], {
+      GITHUB_TOKEN: 'fake-token',
+    });
+
+    expect(result.repos).toHaveLength(0);
+    expect(result.rateLimited).toBe(true);
+  });
+
+  it('returns partial results on HTTP 429 rate limit', async () => {
+    server.use(
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json(
+          { message: 'too many requests' },
+          { status: 429 }
         );
       })
     );
@@ -314,27 +197,10 @@ describe('enrichRepos', () => {
 
   it('throws on non-rate-limit errors', async () => {
     server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
+      http.post('https://api.github.com/graphql', () => {
         return HttpResponse.json(
           { message: 'Internal Server Error' },
           { status: 500 }
-        );
-      })
-    );
-
-    await expect(
-      enrichRepos([createSkeletonRepo('acme/app')], {
-        GITHUB_TOKEN: 'fake-token',
-      })
-    ).rejects.toThrow();
-  });
-
-  it('re-throws 403 without rate limit headers', async () => {
-    server.use(
-      http.get('https://api.github.com/repos/acme/app', () => {
-        return HttpResponse.json(
-          { message: 'Resource not accessible by integration' },
-          { status: 403 }
         );
       })
     );
@@ -362,77 +228,21 @@ function createSkeletonRepo(fullName: string): DependentRepo {
   };
 }
 
-function createRepoResponse(overrides: {
-  fullName: string;
-  stars?: number;
+function createGraphQLRepo(overrides?: {
+  stargazerCount?: number;
   pushedAt?: string;
   avatarUrl?: string;
   isFork?: boolean;
-  archived?: boolean;
+  isArchived?: boolean;
 }) {
-  const [owner, name] = overrides.fullName.split('/');
-
   return {
-    id: 1,
-    node_id: 'node1',
-    name,
-    full_name: overrides.fullName,
-    private: false,
-    fork: overrides.isFork ?? false,
-    archived: overrides.archived ?? false,
+    stargazerCount: overrides?.stargazerCount ?? 100,
+    isArchived: overrides?.isArchived ?? false,
+    isFork: overrides?.isFork ?? false,
+    pushedAt: overrides?.pushedAt ?? '2025-01-01T00:00:00Z',
     owner: {
-      login: owner,
-      id: 1,
-      node_id: 'node1',
-      avatar_url:
-        overrides.avatarUrl ?? 'https://avatars.githubusercontent.com/u/1',
-      gravatar_id: '',
-      url: `https://api.github.com/users/${owner}`,
-      html_url: `https://github.com/${owner}`,
-      type: 'User',
-      site_admin: false,
-      followers_url: '',
-      following_url: '',
-      gists_url: '',
-      starred_url: '',
-      subscriptions_url: '',
-      organizations_url: '',
-      repos_url: '',
-      events_url: '',
-      received_events_url: '',
-    },
-    html_url: `https://github.com/${overrides.fullName}`,
-    description: null,
-    url: `https://api.github.com/repos/${overrides.fullName}`,
-    stargazers_count: overrides.stars ?? 100,
-    pushed_at: overrides.pushedAt ?? '2025-01-01T00:00:00Z',
-    created_at: '2020-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
-    size: 1000,
-    language: 'TypeScript',
-    default_branch: 'main',
-    forks_count: 10,
-    open_issues_count: 5,
-    watchers_count: overrides.stars ?? 100,
-    has_issues: true,
-    has_projects: true,
-    has_downloads: true,
-    has_wiki: true,
-    has_pages: false,
-    has_discussions: false,
-    mirror_url: null,
-    license: null,
-    topics: [],
-    visibility: 'public',
-    forks: 10,
-    open_issues: 5,
-    watchers: overrides.stars ?? 100,
-    permissions: {
-      admin: false,
-      maintain: false,
-      push: false,
-      triage: false,
-      pull: true,
+      avatarUrl:
+        overrides?.avatarUrl ?? 'https://avatars.githubusercontent.com/u/1',
     },
   };
 }

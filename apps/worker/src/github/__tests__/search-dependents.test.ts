@@ -367,7 +367,7 @@ describe('searchDependents', () => {
     expect(results.rateLimited).toBe(true);
   });
 
-  it('stops at 10 pages and sets capped to true', async () => {
+  it('stops at page cap and sets capped to true', async () => {
     let requestCount = 0;
 
     server.use(
@@ -391,8 +391,8 @@ describe('searchDependents', () => {
       GITHUB_TOKEN: 'fake-token',
     });
 
-    expect(requestCount).toBe(3);
-    expect(results.repos).toHaveLength(300);
+    expect(requestCount).toBe(5);
+    expect(results.repos).toHaveLength(500);
     expect(results.partial).toBe(false);
     expect(results.capped).toBe(true);
   });
@@ -419,8 +419,8 @@ describe('searchDependents', () => {
 
     await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
 
-    // 3 pages, but sleep only between pages (2 times, not after page 3)
-    expect(sleep).toHaveBeenCalledTimes(2);
+    // 5 pages, but sleep only between pages (4 times, not after page 5)
+    expect(sleep).toHaveBeenCalledTimes(4);
   });
 
   it('stops early when fewer results than per_page', async () => {

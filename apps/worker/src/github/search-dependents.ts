@@ -10,7 +10,7 @@ import {
 } from './rate-limit';
 import type { DependentRepo, SearchResult } from './types';
 
-const MAX_PAGES = 3;
+const MAX_PAGES = 5;
 const PER_PAGE = 100;
 const MAX_RETRIES = 3;
 const PAGE_DELAY_MS = 6_500;

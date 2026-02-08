@@ -1,20 +1,8 @@
-import { RequestError } from '@octokit/request-error';
 import { Octokit } from '@octokit/rest';
 
-import {
-  getRetryAfter,
-  getRetryDelay,
-  getRateLimitReset,
-  isRateLimitError,
-  isSecondaryRateLimitError,
-  sleep,
-} from './rate-limit';
 import type { DependentRepo, EnrichResult } from './types';
 
-// Keep batches small to avoid triggering GitHub's secondary rate limit
-// (~100 requests/minute for the REST API).
-const BATCH_SIZE = 10;
-const MAX_RETRIES = 3;
+const BATCH_SIZE = 50;
 
 export async function enrichRepos(
   repos: DependentRepo[],
@@ -29,91 +17,93 @@ export async function enrichRepos(
 
   for (let i = 0; i < repos.length; i += BATCH_SIZE) {
     const batch = repos.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map((repo) => enrichOneRepo(octokit, repo))
-    );
+    const query = buildGraphQLQuery(batch);
 
-    // Two-pass processing: surface non-rate-limit errors before handling
-    // rate limits, so genuine failures (e.g. 500s) are never silently swallowed.
-    let hitRateLimit = false;
+    let data: Record<string, GraphQLRepoResult | null>;
 
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        const error = result.reason;
+    try {
+      data =
+        await octokit.graphql<Record<string, GraphQLRepoResult | null>>(query);
+    } catch (error) {
+      if (isGraphQLRateLimited(error)) {
+        console.log(
+          `[enrichRepos] Rate limited after ${enriched.length} results, returning partial data`
+        );
 
-        if (isRateLimitError(error) || isSecondaryRateLimitError(error)) {
-          hitRateLimit = true;
-        } else {
-          throw error;
-        }
+        return { repos: enriched, rateLimited: true };
       }
+
+      throw error;
     }
 
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value !== null) {
-        enriched.push(result.value);
+    for (let j = 0; j < batch.length; j++) {
+      const result = data[`repo_${j}`];
+
+      if (result == null) {
+        continue;
       }
-    }
 
-    if (hitRateLimit) {
-      console.log(
-        `[enrichRepos] Rate limited after ${enriched.length} results, returning partial data`
-      );
+      const repo = batch[j]!;
 
-      return { repos: enriched, rateLimited: true };
+      enriched.push({
+        ...repo,
+        stars: result.stargazerCount,
+        lastPush: result.pushedAt ?? '',
+        avatarUrl: result.owner.avatarUrl,
+        isFork: result.isFork,
+        archived: result.isArchived,
+      });
     }
   }
 
   return { repos: enriched, rateLimited: false };
 }
 
-async function enrichOneRepo(
-  octokit: Octokit,
-  repo: DependentRepo
-): Promise<DependentRepo | null> {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const response = await octokit.rest.repos.get({
-        owner: repo.owner,
-        repo: repo.name,
-      });
+interface GraphQLRepoResult {
+  stargazerCount: number;
+  isArchived: boolean;
+  isFork: boolean;
+  pushedAt: string | null;
+  owner: { avatarUrl: string };
+}
 
-      return {
-        ...repo,
-        stars: response.data.stargazers_count,
-        lastPush: response.data.pushed_at ?? '',
-        avatarUrl: response.data.owner.avatar_url,
-        isFork: response.data.fork,
-        archived: response.data.archived,
-      };
-    } catch (error) {
-      if (error instanceof RequestError && error.status === 404) {
-        return null;
-      }
+function buildGraphQLQuery(repos: DependentRepo[]): string {
+  const fragments = repos.map((repo, i) => {
+    const owner = repo.owner.replace(/[^a-zA-Z0-9_.-]/g, '');
+    const name = repo.name.replace(/[^a-zA-Z0-9_.-]/g, '');
 
-      const isRateLimit =
-        isRateLimitError(error) || isSecondaryRateLimitError(error);
+    return `repo_${i}: repository(owner: "${owner}", name: "${name}") {
+      stargazerCount
+      isArchived
+      isFork
+      pushedAt
+      owner { avatarUrl }
+    }`;
+  });
 
-      if (!isRateLimit) {
-        throw error;
-      }
+  return `{ ${fragments.join('\n')} }`;
+}
 
-      if (attempt === MAX_RETRIES - 1) {
-        throw error;
-      }
-
-      const retryAfterMs = getRetryAfter(error);
-      const delay =
-        retryAfterMs ?? getRetryDelay(attempt, getRateLimitReset(error));
-
-      console.log(
-        `[enrichRepos] Rate limited on ${repo.fullName}, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})`
-      );
-
-      await sleep(delay);
-    }
+function isGraphQLRateLimited(error: unknown): boolean {
+  if (
+    error != null &&
+    typeof error === 'object' &&
+    'status' in error &&
+    (error.status === 403 || error.status === 429)
+  ) {
+    return true;
   }
 
-  // Unreachable (the loop always returns or throws)
-  throw new Error('enrichOneRepo: unexpected loop exit');
+  if (
+    error != null &&
+    typeof error === 'object' &&
+    'errors' in error &&
+    Array.isArray((error as { errors: unknown[] }).errors)
+  ) {
+    return (error as { errors: Array<{ type?: string }> }).errors.some(
+      (e) => e.type === 'RATE_LIMITED'
+    );
+  }
+
+  return false;
 }
