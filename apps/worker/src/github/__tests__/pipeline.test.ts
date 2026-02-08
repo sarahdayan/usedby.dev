@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { DependentRepo, EnrichResult, SearchResult } from '../types';
+import type { DependentRepo, SearchResult } from '../types';
 
 vi.mock('../search-dependents', () => ({
   searchDependents: vi.fn(),
@@ -22,33 +22,43 @@ afterEach(() => {
 });
 
 describe('refreshDependents', () => {
-  it('filters and scores enriched repos', async () => {
-    const enrichedRepos: DependentRepo[] = [
+  it('filters forks and low-stars before enrichment, then filters archived after', async () => {
+    const searchRepos: DependentRepo[] = [
       createRepo({ name: 'popular', stars: 1000 }),
       createRepo({ name: 'fork', stars: 500, isFork: true }),
-      createRepo({ name: 'archived', stars: 500, archived: true }),
+      createRepo({ name: 'archived', stars: 500 }),
       createRepo({ name: 'low-stars', stars: 2 }),
       createRepo({ name: 'less-popular', stars: 100 }),
     ];
 
     vi.mocked(searchDependents).mockResolvedValue({
-      repos: [],
+      repos: searchRepos,
       partial: false,
       rateLimited: false,
       capped: false,
     } satisfies SearchResult);
 
-    vi.mocked(enrichRepos).mockResolvedValue({
-      repos: enrichedRepos,
+    // Enrichment reveals that 'archived' is actually archived
+    vi.mocked(enrichRepos).mockImplementation(async (repos) => ({
+      repos: repos.map((r) =>
+        r.name === 'archived' ? { ...r, archived: true } : r
+      ),
       rateLimited: false,
-    } satisfies EnrichResult);
+    }));
 
     const result = await refreshDependents('react', ENV, NOW);
 
     expect(searchDependents).toHaveBeenCalledWith('react', ENV);
-    expect(enrichRepos).toHaveBeenCalledWith([], ENV);
 
-    // filterDependents removes fork, archived, and low-stars
+    // enrichRepos should only receive pre-filtered repos (no fork, no low-stars)
+    const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![0];
+    expect(enrichedRepos.map((r) => r.name)).toEqual([
+      'popular',
+      'archived',
+      'less-popular',
+    ]);
+
+    // Final result excludes archived (filtered post-enrichment)
     expect(result.repos).toHaveLength(2);
     expect(result.repos.map((r) => r.name)).toEqual([
       'popular',
