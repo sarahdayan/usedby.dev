@@ -1,0 +1,12 @@
+{
+  "extends": "@usedby.dev/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@svg/*": ["../worker/src/svg/*"]
+    }
+  },
+  "include": ["src"]
+}

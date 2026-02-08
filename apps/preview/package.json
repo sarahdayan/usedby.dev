@@ -1,0 +1,16 @@
+{
+  "name": "@usedby.dev/preview",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@usedby.dev/typescript-config": "*",
+    "typescript": "5.9.2",
+    "vite": "^6.3.0"
+  }
+}
