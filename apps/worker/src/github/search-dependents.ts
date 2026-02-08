@@ -85,7 +85,7 @@ async function fetchPageWithRetry(
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await octokit.rest.search.code({
-        q: `"${packageName}" filename:package.json`,
+        q: `"\\"${packageName}\\"" path:**/package.json`,
         per_page: PER_PAGE,
         page,
       });
