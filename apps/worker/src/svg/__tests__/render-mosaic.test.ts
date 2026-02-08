@@ -100,8 +100,8 @@ describe('renderMosaic', () => {
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
     expect(imageCount).toBe(1);
-    expect(svg).toContain('width="64"');
-    expect(svg).toContain('height="64"');
+    expect(svg).toContain('width="70"');
+    expect(svg).toContain('height="70"');
   });
 
   it('returns message SVG for empty input', () => {
@@ -141,9 +141,10 @@ describe('renderMosaic', () => {
   it('sets correct dimensions for the SVG', () => {
     const svg = renderMosaic(createAvatars(35));
 
-    expect(svg).toContain('width="520"');
-    expect(svg).toContain('height="368"');
-    expect(svg).toContain('viewBox="0 0 520 368"');
+    // 10 cols × 70 + 9 × 12 = 808, ceil(35/10) = 4 rows: 4 × 70 + 3 × 12 = 316
+    expect(svg).toContain('width="808"');
+    expect(svg).toContain('height="316"');
+    expect(svg).toContain('viewBox="0 0 808 316"');
   });
 
   it('renders a single avatar with correct dimensions', () => {
@@ -151,9 +152,9 @@ describe('renderMosaic', () => {
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
     expect(imageCount).toBe(1);
-    expect(svg).toContain('width="64"');
-    expect(svg).toContain('height="64"');
-    expect(svg).toContain('viewBox="0 0 64 64"');
+    expect(svg).toContain('width="70"');
+    expect(svg).toContain('height="70"');
+    expect(svg).toContain('viewBox="0 0 70 70"');
   });
 
   it('computes correct dimensions for 100 avatars', () => {
@@ -161,11 +162,11 @@ describe('renderMosaic', () => {
     const imageCount = (svg.match(/<image /g) ?? []).length;
 
     expect(imageCount).toBe(100);
-    // 100 avatars: 7 cols, ceil(100/7) = 15 rows
-    // width = 7*64 + 6*12 = 520
-    // height = 15*64 + 14*12 = 960 + 168 = 1128
-    expect(svg).toContain('width="520"');
-    expect(svg).toContain('height="1128"');
+    // 100 avatars: 10 cols, ceil(100/10) = 10 rows
+    // width = 10*70 + 9*12 = 808
+    // height = 10*70 + 9*12 = 808
+    expect(svg).toContain('width="808"');
+    expect(svg).toContain('height="808"');
   });
 
   it('delegates to renderDetailed when style is detailed', () => {

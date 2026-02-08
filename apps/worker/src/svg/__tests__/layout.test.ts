@@ -2,18 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { computeLayout, computePositions } from '../layout';
 
 describe('computeLayout', () => {
-  it('computes a standard 5×7 grid for 35 avatars', () => {
+  it('computes a standard 4×10 grid for 35 avatars', () => {
     const layout = computeLayout(35);
 
-    expect(layout.columns).toBe(7);
-    expect(layout.rows).toBe(5);
-    expect(layout.avatarSize).toBe(64);
+    expect(layout.columns).toBe(10);
+    expect(layout.rows).toBe(4);
+    expect(layout.avatarSize).toBe(70);
     expect(layout.gap).toBe(12);
     expect(layout.padding).toBe(0);
-    // width = 0 + 7*64 + 6*12 = 448 + 72 = 520
-    expect(layout.width).toBe(520);
-    // height = 0 + 5*64 + 4*12 = 320 + 48 = 368
-    expect(layout.height).toBe(368);
+    // width = 10*70 + 9*12 = 808
+    expect(layout.width).toBe(808);
+    // height = 4*70 + 3*12 = 316
+    expect(layout.height).toBe(316);
   });
 
   it('narrows columns when fewer than COLUMNS avatars', () => {
@@ -21,8 +21,8 @@ describe('computeLayout', () => {
 
     expect(layout.columns).toBe(3);
     expect(layout.rows).toBe(1);
-    expect(layout.width).toBe(3 * 64 + 2 * 12);
-    expect(layout.height).toBe(64);
+    expect(layout.width).toBe(3 * 70 + 2 * 12);
+    expect(layout.height).toBe(70);
   });
 
   it('handles a single avatar', () => {
@@ -30,8 +30,8 @@ describe('computeLayout', () => {
 
     expect(layout.columns).toBe(1);
     expect(layout.rows).toBe(1);
-    expect(layout.width).toBe(64);
-    expect(layout.height).toBe(64);
+    expect(layout.width).toBe(70);
+    expect(layout.height).toBe(70);
   });
 
   it('returns zero dimensions for zero avatars', () => {
@@ -44,12 +44,12 @@ describe('computeLayout', () => {
   });
 
   it('handles a partial last row', () => {
-    const layout = computeLayout(10);
+    const layout = computeLayout(15);
 
-    expect(layout.columns).toBe(7);
+    expect(layout.columns).toBe(10);
     expect(layout.rows).toBe(2);
-    expect(layout.width).toBe(520);
-    expect(layout.height).toBe(2 * 64 + 1 * 12);
+    expect(layout.width).toBe(808);
+    expect(layout.height).toBe(2 * 70 + 1 * 12);
   });
 });
 
@@ -60,25 +60,25 @@ describe('computePositions', () => {
 
     expect(positions).toHaveLength(6);
 
-    // First avatar: top-left
-    expect(positions[0]).toEqual({ cx: 32, cy: 32, index: 0 });
+    // First avatar: top-left (radius = 35, step = 70+12 = 82)
+    expect(positions[0]).toEqual({ cx: 35, cy: 35, index: 0 });
     // Second avatar: one step right
-    expect(positions[1]).toEqual({ cx: 32 + 76, cy: 32, index: 1 });
+    expect(positions[1]).toEqual({ cx: 35 + 82, cy: 35, index: 1 });
     // Fourth avatar: fourth column
-    expect(positions[3]).toEqual({ cx: 32 + 3 * 76, cy: 32, index: 3 });
+    expect(positions[3]).toEqual({ cx: 35 + 3 * 82, cy: 35, index: 3 });
   });
 
   it('positions avatars in the correct row', () => {
-    const layout = computeLayout(10);
-    const positions = computePositions(10, layout);
+    const layout = computeLayout(15);
+    const positions = computePositions(15, layout);
 
-    // First row: indices 0-6
-    for (let i = 0; i < 7; i++) {
-      expect(positions[i]!.cy).toBe(32);
+    // First row: indices 0-9
+    for (let i = 0; i < 10; i++) {
+      expect(positions[i]!.cy).toBe(35);
     }
-    // Second row: indices 7-9
-    for (let i = 7; i < 10; i++) {
-      expect(positions[i]!.cy).toBe(32 + 76);
+    // Second row: indices 10-14
+    for (let i = 10; i < 15; i++) {
+      expect(positions[i]!.cy).toBe(35 + 82);
     }
   });
 
