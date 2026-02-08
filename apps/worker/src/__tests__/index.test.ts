@@ -430,6 +430,96 @@ describe('worker', () => {
     });
   });
 
+  describe('sort validation', () => {
+    it('returns 400 for invalid sort value', async () => {
+      const response = await worker.fetch(
+        createRequest('/npm/react?sort=invalid'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.text()).toBe('Invalid sort parameter');
+      expect(getDependents).not.toHaveBeenCalled();
+    });
+
+    it('sorts repos by stars descending when sort=stars', async () => {
+      const repos = [
+        createScoredRepo('low-stars', { stars: 50, score: 200 }),
+        createScoredRepo('high-stars', { stars: 500, score: 100 }),
+        createScoredRepo('mid-stars', { stars: 200, score: 150 }),
+      ];
+
+      vi.mocked(getDependents).mockResolvedValue({
+        repos,
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(
+        createRequest('/npm/react?sort=stars'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(fetchAvatars).toHaveBeenCalledWith([
+        expect.objectContaining({ name: 'high-stars', stars: 500 }),
+        expect.objectContaining({ name: 'mid-stars', stars: 200 }),
+        expect.objectContaining({ name: 'low-stars', stars: 50 }),
+      ]);
+    });
+
+    it('preserves original order when sort=score', async () => {
+      const repos = [
+        createScoredRepo('first', { stars: 50, score: 200 }),
+        createScoredRepo('second', { stars: 500, score: 100 }),
+      ];
+
+      vi.mocked(getDependents).mockResolvedValue({
+        repos,
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(
+        createRequest('/npm/react?sort=score'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(fetchAvatars).toHaveBeenCalledWith([
+        expect.objectContaining({ name: 'first' }),
+        expect.objectContaining({ name: 'second' }),
+      ]);
+    });
+
+    it('preserves original order when sort is absent', async () => {
+      const repos = [
+        createScoredRepo('first', { stars: 50, score: 200 }),
+        createScoredRepo('second', { stars: 500, score: 100 }),
+      ];
+
+      vi.mocked(getDependents).mockResolvedValue({
+        repos,
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
+
+      expect(fetchAvatars).toHaveBeenCalledWith([
+        expect.objectContaining({ name: 'first' }),
+        expect.objectContaining({ name: 'second' }),
+      ]);
+    });
+  });
+
   describe('method restriction', () => {
     it('returns 405 for POST', async () => {
       const response = await worker.fetch(
@@ -527,7 +617,10 @@ describe('worker', () => {
   });
 });
 
-function createScoredRepo(name: string): ScoredRepo {
+function createScoredRepo(
+  name: string,
+  overrides?: Partial<ScoredRepo>
+): ScoredRepo {
   return {
     owner: 'facebook',
     name,
@@ -539,6 +632,7 @@ function createScoredRepo(name: string): ScoredRepo {
     archived: false,
     packageJsonPath: 'package.json',
     score: 95,
+    ...overrides,
   };
 }
 

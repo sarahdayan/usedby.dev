@@ -98,6 +98,20 @@ export default {
       style = styleParam;
     }
 
+    const sortParam = url.searchParams.get('sort');
+    let sort: 'score' | 'stars' | undefined;
+
+    if (sortParam !== null) {
+      if (sortParam !== 'score' && sortParam !== 'stars') {
+        return new Response('Invalid sort parameter', {
+          status: 400,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+
+      sort = sortParam;
+    }
+
     const isDev = env.DEV === 'true';
     const logger = new DevLogger(isDev);
     const limits = getLimits(isDev);
@@ -115,7 +129,9 @@ export default {
         limits,
       });
 
-      const displayRepos = repos.slice(0, max ?? DEFAULT_MAX);
+      const sorted =
+        sort === 'stars' ? [...repos].sort((a, b) => b.stars - a.stars) : repos;
+      const displayRepos = sorted.slice(0, max ?? DEFAULT_MAX);
 
       logger.time('avatars');
       const avatars = await fetchAvatars(displayRepos);
