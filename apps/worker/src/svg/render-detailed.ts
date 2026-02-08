@@ -86,9 +86,9 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
       [
         `<a href="${href}">`,
         `<image href="${escapeXml(avatar.dataUri)}" x="${imgX}" y="${imgY}" width="${DETAILED_AVATAR_SIZE}" height="${DETAILED_AVATAR_SIZE}" clip-path="url(#${clipId})"/>`,
-        `<text x="${textX}" y="${y + 21}" class="text-primary" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600">`,
+        `<text x="${textX}" y="${y + 28}" class="text-primary" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">`,
         `${escapedName}</text>`,
-        `<text x="${textX}" y="${y + 37}" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="11">`,
+        `<text x="${textX}" y="${y + 46}" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="12">`,
         `${starsText}</text>`,
         `</a>`,
       ].join('')

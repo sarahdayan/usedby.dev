@@ -48,18 +48,22 @@ describe('truncateName', () => {
   });
 
   it('returns names at exactly the limit unchanged', () => {
-    // 20 characters
-    expect(truncateName('org/repo-name-exactl')).toBe('org/repo-name-exactl');
+    // 24 characters
+    expect(truncateName('org/repo-name-exactly-ok')).toBe(
+      'org/repo-name-exactly-ok'
+    );
   });
 
   it('truncates names over the limit with ellipsis', () => {
-    // 21 characters → truncated to 19 + …
-    expect(truncateName('org/repo-name-exactly')).toBe('org/repo-name-exact…');
+    // 25 characters → truncated to 23 + …
+    expect(truncateName('org/repo-name-exactly-ok!')).toBe(
+      'org/repo-name-exactly-o…'
+    );
   });
 
   it('truncates long names', () => {
     expect(truncateName('some-long-org/very-long-repo-name')).toBe(
-      'some-long-org/very-…'
+      'some-long-org/very-long…'
     );
   });
 });
@@ -81,29 +85,29 @@ describe('renderDetailed', () => {
     expect(svg).toMatch(/<\/svg>$/);
   });
 
-  it('renders 4-column layout', () => {
-    const svg = renderDetailed(createAvatars(4));
+  it('renders 3-column layout', () => {
+    const svg = renderDetailed(createAvatars(3));
 
-    // 4 cards × 200px + 3 × 16px gap = 848
-    expect(svg).toContain('width="848"');
-    // 1 row × 48px = 48
-    expect(svg).toContain('height="48"');
+    // 3 cards × 260px + 2 × 12px gap = 804
+    expect(svg).toContain('width="804"');
+    // 1 row × 64px = 64
+    expect(svg).toContain('height="64"');
   });
 
   it('computes correct dimensions for multiple rows', () => {
     const svg = renderDetailed(createAvatars(9));
 
-    // 4 columns × 200 + 3 × 16 = 848
-    expect(svg).toContain('width="848"');
-    // ceil(9/4) = 3 rows: 3 × 48 + 2 × 12 = 168
-    expect(svg).toContain('height="168"');
+    // 3 columns × 260 + 2 × 12 = 804
+    expect(svg).toContain('width="804"');
+    // ceil(9/3) = 3 rows: 3 × 64 + 2 × 12 = 216
+    expect(svg).toContain('height="216"');
   });
 
   it('uses fewer columns when fewer avatars', () => {
     const svg = renderDetailed(createAvatars(2));
 
-    // 2 columns × 200 + 1 × 16 = 416
-    expect(svg).toContain('width="416"');
+    // 2 columns × 260 + 1 × 12 = 532
+    expect(svg).toContain('width="532"');
   });
 
   it('renders one image per avatar', () => {
@@ -171,7 +175,7 @@ describe('renderDetailed', () => {
     ];
     const svg = renderDetailed(avatars);
 
-    expect(svg).toContain('some-long-org/very-…</text>');
+    expect(svg).toContain('some-long-org/very-long…</text>');
     // href should still have the full name
     expect(svg).toContain(
       'href="https://github.com/some-long-org/very-long-repo-name"'
@@ -210,22 +214,22 @@ describe('renderDetailed', () => {
   it('renders a single avatar correctly', () => {
     const svg = renderDetailed(createAvatars(1));
 
-    expect(svg).toContain('width="200"');
-    expect(svg).toContain('height="48"');
+    expect(svg).toContain('width="260"');
+    expect(svg).toContain('height="64"');
     const imageCount = (svg.match(/<image /g) ?? []).length;
     expect(imageCount).toBe(1);
   });
 
-  it('uses 48px avatar size', () => {
+  it('uses 64px avatar size', () => {
     const svg = renderDetailed(createAvatars(1));
 
-    expect(svg).toContain('width="48" height="48"');
+    expect(svg).toContain('width="64" height="64"');
   });
 
   it('uses circular clip paths', () => {
     const svg = renderDetailed(createAvatars(1));
 
     expect(svg).toContain('<clipPath id="clip-0">');
-    expect(svg).toContain('r="24"');
+    expect(svg).toContain('r="32"');
   });
 });
