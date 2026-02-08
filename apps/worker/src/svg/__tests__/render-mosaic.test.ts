@@ -34,7 +34,7 @@ describe('renderMosaic', () => {
     expect(svg).toContain('width=');
     expect(svg).toContain('height=');
     expect(svg).toContain('role="img"');
-    expect(svg).toContain('aria-label="Dependents"');
+    expect(svg).toContain('aria-label="Used by"');
     expect(svg).toContain('<defs>');
     expect(svg).toMatch(/<\/svg>$/);
   });

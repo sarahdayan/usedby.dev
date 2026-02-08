@@ -18,7 +18,6 @@
     var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, 'Liberation Mono', 'Courier New', monospace;
   --max-width-page: 720px;
-  --spacing-section: 48px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,8 +77,20 @@
     height: auto;
   }
 
-  svg[aria-label='Dependents'] {
+  svg[aria-label='Used by'] {
     width: 100% !important;
     height: auto !important;
   }
+}
+
+@utility code-tag {
+  color: #ff7b72;
+}
+
+@utility code-attr {
+  color: #d2a8ff;
+}
+
+@utility code-string {
+  color: #a5d6ff;
 }

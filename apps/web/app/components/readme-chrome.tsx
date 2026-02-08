@@ -14,11 +14,11 @@ export function ReadmeChrome({ children }: { children: React.ReactNode }) {
         README.md
       </div>
       <div className="p-8 text-base leading-relaxed max-sm:p-5">
-        <h3 className="text-2xl font-semibold pb-2 mb-4 border-b border-chrome-border">
-          my-awesome-library
-        </h3>
-        <p className="mb-4 text-fg-muted">
-          A fantastic open-source library used by thousands of projects.
+        <h1 className="text-4xl font-semibold pb-2 mb-4 border-b border-chrome-border">
+          usedby.dev
+        </h1>
+        <p className="mb-4 text-fg-muted text-xl">
+          Showcase who depends on your npm package.
         </p>
         <h4 className="text-base font-semibold mt-6 mb-4">Used by</h4>
         {children}

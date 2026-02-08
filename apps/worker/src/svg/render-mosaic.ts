@@ -48,7 +48,7 @@ export function renderMosaic(
   }
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${svgHeight}" viewBox="0 0 ${layout.width} ${svgHeight}" role="img" aria-label="Dependents">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${svgHeight}" viewBox="0 0 ${layout.width} ${svgHeight}" role="img" aria-label="Used by">`,
     renderThemeStyle(options?.theme),
     `<defs>${fragments.map((f) => f.def).join('')}</defs>`,
     fragments.map((f) => f.body).join(''),

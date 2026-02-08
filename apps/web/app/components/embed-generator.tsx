@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 
 const VALID_PATTERN = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
-const DEFAULT_MAX = 35;
+const DEFAULT_MAX = 30;
 const MAX_AVATARS = 40;
 
 function SegmentedControl<T extends string>({
@@ -18,22 +18,24 @@ function SegmentedControl<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="flex items-center bg-code-bg rounded-xl font-mono text-[0.9375rem] px-2 py-2 max-sm:text-[0.8125rem]">
-      <span className="sr-only">{label}</span>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={`px-5 py-4 rounded-lg cursor-pointer transition-colors ${
-            value === option.value
-              ? 'bg-fg/10 text-code-fg'
-              : 'text-fg-muted hover:text-code-fg'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
+    <div className="flex items-center gap-1">
+      <span className="text-fg-muted mr-1 text-sm">{label}</span>
+      <div className="flex bg-fg/5 rounded-md p-0.5">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-sm ${
+              value === option.value
+                ? 'bg-bg text-fg shadow-sm'
+                : 'text-fg-muted hover:text-fg'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -61,6 +63,7 @@ export function EmbedGenerator() {
   const [generatedTheme, setGeneratedTheme] = useState<
     'auto' | 'light' | 'dark'
   >('auto');
+  const [snippetTab, setSnippetTab] = useState<'markdown' | 'html'>('markdown');
   const [markdownCopied, setMarkdownCopied] = useState(false);
   const [htmlCopied, setHtmlCopied] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -84,8 +87,9 @@ export function EmbedGenerator() {
   if (displayTheme !== 'auto') params.set('theme', displayTheme);
   const query = params.size > 0 ? `?${params}` : '';
   const imageUrl = `https://api.usedby.dev/${displayPath}${query}`;
-  const markdownSnippet = `![Used by](${imageUrl})`;
-  const htmlSnippet = `<img src="${imageUrl}" alt="Used by" />`;
+  const dependentsUrl = `https://github.com/OWNER/REPO/network/dependents`;
+  const markdownSnippet = `[![Used by](${imageUrl})](${dependentsUrl})\n\n<sub>Made with [usedby.dev](https://usedby.dev/).</sub>`;
+  const htmlSnippet = `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>\n\n<sub>Made with <a href="https://usedby.dev/">usedby.dev</a>.</sub>`;
 
   const clampMax = (value: string) =>
     Math.max(1, Math.min(MAX_AVATARS, Math.floor(Number(value)) || 1));
@@ -133,7 +137,7 @@ export function EmbedGenerator() {
   }, [generated, htmlSnippet]);
 
   return (
-    <section className="py-section border-t border-border">
+    <section className="py-10">
       <p className="text-xs font-bold uppercase tracking-widest text-fg-muted mb-6">
         Try it
       </p>
@@ -142,7 +146,7 @@ export function EmbedGenerator() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="react"
+          placeholder="npm package name"
           aria-label="npm package name"
           className="flex-1 bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl outline-none placeholder:text-fg-muted focus-visible:ring-2 focus-visible:ring-fg/20 max-sm:text-[0.8125rem] max-sm:p-5"
         />
@@ -167,11 +171,18 @@ export function EmbedGenerator() {
           Generate
         </button>
       </form>
-      <div className="flex gap-3 mb-2">
+      <div className="flex flex-wrap gap-4 text-sm mb-2">
         <SegmentedControl
           label="Style"
           value={styleInput}
-          onChange={setStyleInput}
+          onChange={(v) => {
+            setStyleInput(v);
+            if (generated) {
+              setGeneratedStyle(v);
+              setImageLoaded(false);
+              setImageError(false);
+            }
+          }}
           options={[
             { value: 'mosaic', label: 'Mosaic' },
             { value: 'detailed', label: 'Detailed' },
@@ -180,7 +191,14 @@ export function EmbedGenerator() {
         <SegmentedControl
           label="Sort"
           value={sortInput}
-          onChange={setSortInput}
+          onChange={(v) => {
+            setSortInput(v);
+            if (generated) {
+              setGeneratedSort(v);
+              setImageLoaded(false);
+              setImageError(false);
+            }
+          }}
           options={[
             { value: 'score', label: 'Score' },
             { value: 'stars', label: 'Stars' },
@@ -189,7 +207,14 @@ export function EmbedGenerator() {
         <SegmentedControl
           label="Theme"
           value={themeInput}
-          onChange={setThemeInput}
+          onChange={(v) => {
+            setThemeInput(v);
+            if (generated) {
+              setGeneratedTheme(v);
+              setImageLoaded(false);
+              setImageError(false);
+            }
+          }}
           options={[
             { value: 'auto', label: 'Auto' },
             { value: 'light', label: 'Light' },
@@ -202,40 +227,41 @@ export function EmbedGenerator() {
       >
         Enter a valid npm package name
       </p>
-      <div
-        className={`flex flex-col gap-5${generated ? '' : ' opacity-50'}`}
-        aria-hidden={!generated}
-      >
+      <div className={`flex flex-col gap-5${generated ? '' : ' opacity-50'}`}>
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-fg-muted">Markdown</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSnippetTab('markdown')}
+                className={`text-sm cursor-pointer ${snippetTab === 'markdown' ? 'text-fg' : 'text-fg-muted hover:text-fg'}`}
+              >
+                Markdown
+              </button>
+              <button
+                type="button"
+                onClick={() => setSnippetTab('html')}
+                className={`text-sm cursor-pointer ${snippetTab === 'html' ? 'text-fg' : 'text-fg-muted hover:text-fg'}`}
+              >
+                HTML
+              </button>
+            </div>
             <button
-              onClick={copyMarkdown}
+              onClick={snippetTab === 'markdown' ? copyMarkdown : copyHtml}
               disabled={!generated}
               className="text-sm text-fg-muted hover:text-fg cursor-pointer disabled:cursor-default disabled:hover:text-fg-muted"
             >
               <span aria-live="polite">
-                {markdownCopied ? 'Copied!' : 'Copy'}
+                {(snippetTab === 'markdown' ? markdownCopied : htmlCopied)
+                  ? 'Copied!'
+                  : 'Copy'}
               </span>
             </button>
           </div>
           <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl overflow-x-auto max-sm:text-[0.8125rem] max-sm:p-5">
-            <code>{markdownSnippet}</code>
-          </pre>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-fg-muted">HTML</p>
-            <button
-              onClick={copyHtml}
-              disabled={!generated}
-              className="text-sm text-fg-muted hover:text-fg cursor-pointer disabled:cursor-default disabled:hover:text-fg-muted"
-            >
-              <span aria-live="polite">{htmlCopied ? 'Copied!' : 'Copy'}</span>
-            </button>
-          </div>
-          <pre className="bg-code-bg text-code-fg font-mono text-[0.9375rem] leading-[1.6] px-7 py-6 rounded-xl overflow-x-auto max-sm:text-[0.8125rem] max-sm:p-5">
-            <code>{htmlSnippet}</code>
+            <code>
+              {snippetTab === 'markdown' ? markdownSnippet : htmlSnippet}
+            </code>
           </pre>
         </div>
         <div className="mt-3">

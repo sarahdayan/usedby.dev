@@ -1,6 +1,6 @@
 # usedby.dev
 
-**Showcase who's using your open-source library with a single image embed.**
+**Showcase who depends on your npm package with a single image embed.**
 
 usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any npm package — perfect for your README, docs, or landing page.
 
@@ -11,7 +11,9 @@ usedby.dev generates beautiful, zero-config SVG images showing the top dependent
 Add this to your README or docs, replacing `your-package` with your npm package name:
 
 ```md
-[![Dependents](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)
+[![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)
+
+<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
 ```
 
 That's it. No API key, no sign-up, no config.
@@ -19,7 +21,9 @@ That's it. No API key, no sign-up, no config.
 For scoped packages:
 
 ```md
-[![Dependents](https://api.usedby.dev/npm/@your-scope/your-package)](https://github.com/your-org/your-repo/network/dependents)
+[![Used by](https://api.usedby.dev/npm/@your-scope/your-package)](https://github.com/your-org/your-repo/network/dependents)
+
+<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
 ```
 
 ## Customization
@@ -38,13 +42,17 @@ Append query parameters to customize the output:
 **Detailed view with top 10 by stars, dark theme:**
 
 ```md
-[![Dependents](https://api.usedby.dev/npm/your-package?style=detailed&max=10&sort=stars&theme=dark)](https://github.com/your-org/your-repo/network/dependents)
+[![Used by](https://api.usedby.dev/npm/your-package?style=detailed&max=10&sort=stars&theme=dark)](https://github.com/your-org/your-repo/network/dependents)
+
+<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
 ```
 
 **Mosaic view with 20 dependents:**
 
 ```md
-[![Dependents](https://api.usedby.dev/npm/your-package?max=20)](https://github.com/your-org/your-repo/network/dependents)
+[![Used by](https://api.usedby.dev/npm/your-package?max=20)](https://github.com/your-org/your-repo/network/dependents)
+
+<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
 ```
 
 ## How it works

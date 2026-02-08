@@ -123,7 +123,7 @@ export function renderDetailed(
   }
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Dependents">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Used by">`,
     renderThemeStyle(theme),
     `<defs>${defs.join('')}</defs>`,
     bodies.join(''),

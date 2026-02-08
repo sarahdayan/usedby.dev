@@ -80,7 +80,7 @@ describe('renderDetailed', () => {
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(svg).toContain('viewBox=');
     expect(svg).toContain('role="img"');
-    expect(svg).toContain('aria-label="Dependents"');
+    expect(svg).toContain('aria-label="Used by"');
     expect(svg).toContain('<defs>');
     expect(svg).toMatch(/<\/svg>$/);
   });
