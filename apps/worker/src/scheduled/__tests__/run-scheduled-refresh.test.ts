@@ -15,8 +15,9 @@ vi.mock('../../cache/cache', async (importOriginal) => {
   };
 });
 
+import { writeCache } from '../../cache/cache';
 import { refreshDependents } from '../../github/pipeline';
-import { runScheduledRefresh } from '../run-scheduled-refresh';
+import { EVICTION_TTL_MS, runScheduledRefresh } from '../run-scheduled-refresh';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
 const ENV = {
@@ -38,6 +39,7 @@ describe('runScheduledRefresh', () => {
       keysScanned: 0,
       refreshed: 0,
       skipped: 0,
+      evicted: 0,
       errors: 0,
       abortedDueToRateLimit: false,
     });
@@ -229,22 +231,196 @@ describe('runScheduledRefresh', () => {
     expect(result.refreshed).toBe(2);
   });
 
-  it('falls back to kv.get for legacy entries with null metadata', async () => {
-    const legacyEntry = createEntry({
-      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
-    });
-
+  it('skips entries without metadata', async () => {
     ENV.DEPENDENTS_CACHE = createMockKV({
       keys: [{ name: 'npm:react', metadata: null }],
-      values: { 'npm:react': JSON.stringify(legacyEntry) },
+    });
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(result.keysScanned).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.refreshed).toBe(0);
+    expect(result.evicted).toBe(0);
+    expect(refreshDependents).not.toHaveBeenCalled();
+  });
+
+  it('evicts entries not accessed in 30+ days', async () => {
+    const inactive: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: new Date(
+        NOW.getTime() - EVICTION_TTL_MS - 1
+      ).toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: inactive }],
+    });
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith('npm:react');
+    expect(result.evicted).toBe(1);
+    expect(result.refreshed).toBe(0);
+    expect(refreshDependents).not.toHaveBeenCalled();
+  });
+
+  it('refreshes stale entries with recent access, does not evict', async () => {
+    const stale: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: stale }],
     });
 
     vi.mocked(refreshDependents).mockResolvedValue(createEntry());
 
     const result = await runScheduledRefresh(ENV, NOW);
 
-    expect(ENV.DEPENDENTS_CACHE.get).toHaveBeenCalledWith('npm:react');
+    expect(ENV.DEPENDENTS_CACHE.delete).not.toHaveBeenCalled();
+    expect(result.evicted).toBe(0);
     expect(result.refreshed).toBe(1);
+  });
+
+  it('evicts inactive entries and refreshes stale entries in a mixed set', async () => {
+    const inactive: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: new Date(
+        NOW.getTime() - EVICTION_TTL_MS - 1
+      ).toISOString(),
+      partial: false,
+    };
+    const stale: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [
+        { name: 'npm:old-lib', metadata: inactive },
+        { name: 'npm:react', metadata: stale },
+      ],
+    });
+
+    vi.mocked(refreshDependents).mockResolvedValue(createEntry());
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith('npm:old-lib');
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledTimes(1);
+    expect(result.evicted).toBe(1);
+    expect(result.refreshed).toBe(1);
+    expect(result.keysScanned).toBe(2);
+    expect(result.skipped).toBe(0);
+  });
+
+  it('evicts entry exactly at the 30-day boundary', async () => {
+    const atBoundary: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: new Date(NOW.getTime() - EVICTION_TTL_MS).toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:boundary-lib', metadata: atBoundary }],
+    });
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith(
+      'npm:boundary-lib'
+    );
+    expect(result.evicted).toBe(1);
+    expect(result.refreshed).toBe(0);
+  });
+
+  it('does not evict entry just under the 30-day boundary', async () => {
+    const justUnder: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: new Date(
+        NOW.getTime() - EVICTION_TTL_MS + 1
+      ).toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:active-lib', metadata: justUnder }],
+    });
+
+    vi.mocked(refreshDependents).mockResolvedValue(createEntry());
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(ENV.DEPENDENTS_CACHE.delete).not.toHaveBeenCalled();
+    expect(result.evicted).toBe(0);
+    expect(result.refreshed).toBe(1);
+  });
+
+  it('evicts inactive entries before refreshing stale entries', async () => {
+    const inactive: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: new Date(
+        NOW.getTime() - EVICTION_TTL_MS - 1
+      ).toISOString(),
+      partial: false,
+    };
+    const stale: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [
+        { name: 'npm:old-lib', metadata: inactive },
+        { name: 'npm:react', metadata: stale },
+      ],
+    });
+
+    const callOrder: string[] = [];
+    (
+      ENV.DEPENDENTS_CACHE.delete as ReturnType<typeof vi.fn>
+    ).mockImplementation(() => {
+      callOrder.push('delete');
+      return Promise.resolve();
+    });
+    vi.mocked(refreshDependents).mockImplementation(() => {
+      callOrder.push('refresh');
+      return Promise.resolve(createEntry());
+    });
+
+    await runScheduledRefresh(ENV, NOW);
+
+    expect(callOrder).toEqual(['delete', 'refresh']);
+  });
+
+  it('preserves existing lastAccessedAt on scheduled refresh', async () => {
+    const originalLastAccessedAt = new Date(
+      NOW.getTime() - 12 * 60 * 60 * 1000
+    ).toISOString();
+    const stale: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: originalLastAccessedAt,
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: stale }],
+    });
+
+    vi.mocked(refreshDependents).mockResolvedValue(
+      createEntry({ lastAccessedAt: NOW.toISOString() })
+    );
+
+    await runScheduledRefresh(ENV, NOW);
+
+    const writtenEntry = vi.mocked(writeCache).mock.calls[0]![2];
+    expect(writtenEntry.lastAccessedAt).toBe(originalLastAccessedAt);
   });
 });
 
@@ -260,12 +436,11 @@ function createEntry(overrides: Partial<CacheEntry> = {}): CacheEntry {
 
 interface MockKVOptions {
   keys?: Array<{ name: string; metadata: CacheMetadata | null }>;
-  values?: Record<string, string>;
   pageSize?: number;
 }
 
 function createMockKV(options: MockKVOptions = {}) {
-  const { keys = [], values = {}, pageSize } = options;
+  const { keys = [], pageSize } = options;
 
   const list = vi.fn((opts?: { cursor?: string }) => {
     const cursor = opts?.cursor;
@@ -292,7 +467,6 @@ function createMockKV(options: MockKVOptions = {}) {
 
   return {
     list,
-    get: vi.fn((key: string) => Promise.resolve(values[key] ?? null)),
     put: vi.fn(() => Promise.resolve()),
     delete: vi.fn(() => Promise.resolve()),
   } as unknown as KVNamespace;

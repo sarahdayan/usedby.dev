@@ -1,4 +1,5 @@
 import type { ScoredRepo } from '../github/types';
+import type { CacheEntry } from './types';
 import { refreshDependents } from '../github/pipeline';
 import {
   buildCacheKey,
@@ -36,7 +37,7 @@ export async function getDependents(
   }
 
   if (cached.status === 'stale') {
-    waitUntil(backgroundRefresh(packageName, env, kv, key, now));
+    waitUntil(backgroundRefresh(packageName, env, kv, key, cached.entry, now));
 
     return { repos: cached.entry.repos, fromCache: true, refreshing: true };
   }
@@ -52,12 +53,16 @@ async function backgroundRefresh(
   env: { GITHUB_TOKEN: string },
   kv: KVNamespace,
   key: string,
+  staleEntry: CacheEntry,
   now?: Date
 ): Promise<void> {
   try {
     const entry = await refreshDependents(packageName, env, now);
     await writeCache(kv, key, entry);
   } catch (error) {
+    // Refresh failed — still bump lastAccessedAt so the entry isn't
+    // evicted while it's actively being served to users
+    await touchLastAccessed(kv, key, staleEntry, now);
     console.error('Background refresh failed:', error);
   }
 }

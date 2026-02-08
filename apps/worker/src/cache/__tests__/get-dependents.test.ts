@@ -26,49 +26,6 @@ import { refreshDependents } from '../../github/pipeline';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
 
-function createScoredRepo(name: string): ScoredRepo {
-  return {
-    owner: 'test',
-    name,
-    fullName: `test/${name}`,
-    stars: 100,
-    lastPush: '2025-01-01T00:00:00Z',
-    avatarUrl: 'https://example.com/avatar.png',
-    isFork: false,
-    archived: false,
-    score: 95,
-  };
-}
-
-function createEntry(overrides: Partial<CacheEntry> = {}): CacheEntry {
-  return {
-    repos: [createScoredRepo('repo')],
-    fetchedAt: '2025-01-15T10:00:00Z',
-    lastAccessedAt: '2025-01-15T10:00:00Z',
-    partial: false,
-    ...overrides,
-  };
-}
-
-function createMockKV() {
-  return {
-    get: vi.fn(),
-    put: vi.fn(),
-  } as unknown as KVNamespace;
-}
-
-function createOptions(overrides: Partial<GetDependentsOptions> = {}) {
-  return {
-    platform: 'npm',
-    packageName: 'react',
-    kv: createMockKV(),
-    env: { GITHUB_TOKEN: 'fake-token' },
-    waitUntil: vi.fn(),
-    now: NOW,
-    ...overrides,
-  };
-}
-
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -138,17 +95,56 @@ describe('getDependents', () => {
     );
   });
 
-  it('swallows background refresh errors', async () => {
+  it('does not call touchLastAccessed on successful background refresh', async () => {
+    const entry = createEntry();
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockResolvedValue(
+      createEntry({ fetchedAt: NOW.toISOString() })
+    );
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    await getDependents(options);
+
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(touchLastAccessed).not.toHaveBeenCalled();
+  });
+
+  it('calls touchLastAccessed when background refresh fails', async () => {
     const entry = createEntry();
     vi.mocked(buildCacheKey).mockReturnValue('npm:react');
     vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
     vi.mocked(refreshDependents).mockRejectedValue(new Error('API error'));
+    vi.mocked(touchLastAccessed).mockResolvedValue();
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const options = createOptions();
     await getDependents(options);
 
-    // Await the promise passed to waitUntil — should not reject
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(touchLastAccessed).toHaveBeenCalledWith(
+      options.kv,
+      'npm:react',
+      entry,
+      NOW
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('swallows background refresh errors', async () => {
+    const entry = createEntry();
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockRejectedValue(new Error('API error'));
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const options = createOptions();
+    await getDependents(options);
+
+    // Await the background refresh promise — should not reject
     await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(consoleSpy).toHaveBeenCalledWith(
       'Background refresh failed:',
@@ -190,3 +186,46 @@ describe('getDependents', () => {
     await expect(getDependents(options)).rejects.toThrow('Pipeline failed');
   });
 });
+
+function createScoredRepo(name: string): ScoredRepo {
+  return {
+    owner: 'test',
+    name,
+    fullName: `test/${name}`,
+    stars: 100,
+    lastPush: '2025-01-01T00:00:00Z',
+    avatarUrl: 'https://example.com/avatar.png',
+    isFork: false,
+    archived: false,
+    score: 95,
+  };
+}
+
+function createEntry(overrides: Partial<CacheEntry> = {}): CacheEntry {
+  return {
+    repos: [createScoredRepo('repo')],
+    fetchedAt: '2025-01-15T10:00:00Z',
+    lastAccessedAt: '2025-01-15T10:00:00Z',
+    partial: false,
+    ...overrides,
+  };
+}
+
+function createMockKV() {
+  return {
+    get: vi.fn(),
+    put: vi.fn(),
+  } as unknown as KVNamespace;
+}
+
+function createOptions(overrides: Partial<GetDependentsOptions> = {}) {
+  return {
+    platform: 'npm',
+    packageName: 'react',
+    kv: createMockKV(),
+    env: { GITHUB_TOKEN: 'fake-token' },
+    waitUntil: vi.fn(),
+    now: NOW,
+    ...overrides,
+  };
+}

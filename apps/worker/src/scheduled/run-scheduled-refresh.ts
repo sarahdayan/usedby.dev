@@ -1,6 +1,6 @@
 import { FRESH_TTL_MS, writeCache } from '../cache/cache';
 import { parseCacheKey } from '../cache/parse-cache-key';
-import type { CacheEntry, CacheMetadata } from '../cache/types';
+import type { CacheMetadata } from '../cache/types';
 import { refreshDependents } from '../github/pipeline';
 import {
   isRateLimitError,
@@ -9,11 +9,13 @@ import {
 
 const MAX_REFRESHES_PER_RUN = 5;
 const PARTIAL_FRESH_TTL_MS = 12 * 60 * 60 * 1000;
+export const EVICTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface ScheduledRefreshResult {
   keysScanned: number;
   refreshed: number;
   skipped: number;
+  evicted: number;
   errors: number;
   abortedDueToRateLimit: boolean;
 }
@@ -23,6 +25,7 @@ interface StaleEntry {
   packageName: string;
   fetchedAt: number;
   partial: boolean;
+  lastAccessedAt: string;
 }
 
 export async function runScheduledRefresh(
@@ -34,6 +37,7 @@ export async function runScheduledRefresh(
 
   // Scan all keys with cursor pagination
   const staleEntries: StaleEntry[] = [];
+  const inactiveKeys: string[] = [];
   let keysScanned = 0;
   let cursor: string | undefined;
 
@@ -45,23 +49,19 @@ export async function runScheduledRefresh(
     for (const key of listResult.keys) {
       keysScanned++;
 
-      let fetchedAt: number;
-      let partial: boolean;
+      if (!key.metadata) {
+        continue;
+      }
 
-      if (key.metadata) {
-        fetchedAt = new Date(key.metadata.fetchedAt).getTime();
-        partial = key.metadata.partial;
-      } else {
-        // Legacy entry without metadata — fall back to reading the value
-        const raw = await kv.get(key.name);
+      const fetchedAt = new Date(key.metadata.fetchedAt).getTime();
+      const partial = key.metadata.partial;
+      const lastAccessedAtMs = new Date(key.metadata.lastAccessedAt).getTime();
+      const lastAccessedAtIso = key.metadata.lastAccessedAt;
 
-        if (raw === null) {
-          continue;
-        }
-
-        const entry: CacheEntry = JSON.parse(raw);
-        fetchedAt = new Date(entry.fetchedAt).getTime();
-        partial = entry.partial;
+      // Inactive entries: not accessed in 30+ days → evict
+      if (nowMs - lastAccessedAtMs >= EVICTION_TTL_MS) {
+        inactiveKeys.push(key.name);
+        continue;
       }
 
       const age = nowMs - fetchedAt;
@@ -76,6 +76,7 @@ export async function runScheduledRefresh(
             packageName: parsed.packageName,
             fetchedAt,
             partial,
+            lastAccessedAt: lastAccessedAtIso,
           });
         }
       }
@@ -83,6 +84,11 @@ export async function runScheduledRefresh(
 
     cursor = listResult.list_complete ? undefined : listResult.cursor;
   } while (cursor);
+
+  // Evict inactive entries first
+  for (const key of inactiveKeys) {
+    await kv.delete(key);
+  }
 
   // Sort: partial entries first, then oldest first
   staleEntries.sort((a, b) => {
@@ -105,6 +111,9 @@ export async function runScheduledRefresh(
         { GITHUB_TOKEN: env.GITHUB_TOKEN },
         now
       );
+      // Preserve the original lastAccessedAt so cron refreshes don't reset
+      // the eviction clock — only real user requests should extend it
+      entry.lastAccessedAt = staleEntry.lastAccessedAt;
       await writeCache(kv, staleEntry.key, entry);
       refreshed++;
     } catch (error) {
@@ -121,7 +130,8 @@ export async function runScheduledRefresh(
   return {
     keysScanned,
     refreshed,
-    skipped: keysScanned - staleEntries.length,
+    skipped: keysScanned - staleEntries.length - inactiveKeys.length,
+    evicted: inactiveKeys.length,
     errors,
     abortedDueToRateLimit,
   };

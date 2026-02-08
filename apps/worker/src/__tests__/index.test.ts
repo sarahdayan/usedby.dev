@@ -34,6 +34,7 @@ describe('worker', () => {
         keysScanned: 0,
         refreshed: 0,
         skipped: 0,
+        evicted: 0,
         errors: 0,
         abortedDueToRateLimit: false,
       });
