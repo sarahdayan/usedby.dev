@@ -3,6 +3,7 @@ import type { Theme } from './theme';
 export interface RenderOptions {
   style?: 'mosaic' | 'detailed';
   theme?: Theme;
+  dependentCount?: number;
 }
 
 export interface LayoutConfig {

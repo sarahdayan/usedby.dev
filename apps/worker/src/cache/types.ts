@@ -8,6 +8,7 @@ export interface CacheMetadata {
 
 export interface CacheEntry extends CacheMetadata {
   repos: ScoredRepo[];
+  dependentCount?: number;
 }
 
 export type CacheResult =

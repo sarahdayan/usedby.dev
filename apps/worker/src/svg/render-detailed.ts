@@ -1,4 +1,8 @@
 import {
+  BADGE_FONT_SIZE,
+  BADGE_GAP,
+  BADGE_HEIGHT,
+  BADGE_PADDING_X,
   DETAILED_AVATAR_SIZE,
   DETAILED_CARD_HEIGHT,
   DETAILED_CARD_WIDTH,
@@ -9,6 +13,7 @@ import {
   DETAILED_TEXT_GAP,
   PADDING,
 } from './constants';
+import { formatCount } from './format-count';
 import { escapeXml } from './avatar';
 import type { Theme } from './theme';
 import { renderThemeStyle } from './theme';
@@ -43,7 +48,11 @@ export function truncateName(name: string): string {
   return `${name.slice(0, DETAILED_NAME_MAX_CHARS - 1)}…`;
 }
 
-export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
+export function renderDetailed(
+  avatars: AvatarData[],
+  theme?: Theme,
+  dependentCount?: number
+): string {
   if (avatars.length === 0) {
     return '';
   }
@@ -54,8 +63,10 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
     PADDING * 2 +
     columns * DETAILED_CARD_WIDTH +
     (columns - 1) * DETAILED_GAP_X;
-  const height =
+  const hasBadge = dependentCount != null && dependentCount > 0;
+  const gridHeight =
     PADDING * 2 + rows * DETAILED_CARD_HEIGHT + (rows - 1) * DETAILED_GAP_Y;
+  const height = hasBadge ? gridHeight + BADGE_GAP + BADGE_HEIGHT : gridHeight;
 
   const defs: string[] = [];
   const bodies: string[] = [];
@@ -101,11 +112,22 @@ export function renderDetailed(avatars: AvatarData[], theme?: Theme): string {
     );
   }
 
+  let badgeFragment = '';
+  if (hasBadge) {
+    const label = `Used by ${formatCount(dependentCount)} repositories`;
+    const pillWidth = label.length * 7.2 + BADGE_PADDING_X * 2;
+    const pillX = width / 2 - pillWidth / 2;
+    const pillY = gridHeight + BADGE_GAP;
+    const pillRx = BADGE_HEIGHT / 2;
+    badgeFragment = `<rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${BADGE_HEIGHT}" rx="${pillRx}" class="badge-bg"/><text x="${width / 2}" y="${pillY + BADGE_HEIGHT / 2}" text-anchor="middle" dominant-baseline="central" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="${BADGE_FONT_SIZE}" font-weight="600">${label}</text>`;
+  }
+
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Dependents">`,
     renderThemeStyle(theme),
     `<defs>${defs.join('')}</defs>`,
     bodies.join(''),
+    badgeFragment,
     '</svg>',
   ].join('');
 }

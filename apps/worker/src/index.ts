@@ -147,7 +147,7 @@ export default {
     logger.log('request', `GET /${platform}/${packageName}`);
 
     try {
-      const { repos } = await getDependents({
+      const { repos, dependentCount } = await getDependents({
         platform: 'npm',
         packageName,
         kv: env.DEPENDENTS_CACHE,
@@ -166,7 +166,7 @@ export default {
       logger.timeEnd('avatars');
       logger.log('avatars', `${avatars.length} fetched`);
 
-      const svg = renderMosaic(avatars, { style, theme });
+      const svg = renderMosaic(avatars, { style, theme, dependentCount });
 
       logger.timeEnd('total');
       logger.summary();

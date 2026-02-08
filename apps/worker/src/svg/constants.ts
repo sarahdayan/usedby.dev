@@ -13,3 +13,8 @@ export const DETAILED_TEXT_GAP = 12;
 export const DETAILED_CARD_WIDTH = 260;
 export const DETAILED_CARD_HEIGHT = 64;
 export const DETAILED_NAME_MAX_CHARS = 24;
+
+export const BADGE_GAP = 12;
+export const BADGE_HEIGHT = 32;
+export const BADGE_FONT_SIZE = 14;
+export const BADGE_PADDING_X = 12;

@@ -115,7 +115,7 @@ describe('renderMosaic', () => {
     const avatars = createAvatars(5);
     const svg = renderMosaic(avatars, { style: 'detailed' });
 
-    expect(renderDetailed).toHaveBeenCalledWith(avatars, undefined);
+    expect(renderDetailed).toHaveBeenCalledWith(avatars, undefined, undefined);
     expect(svg).toBe('<svg>detailed</svg>');
   });
 
@@ -147,7 +147,14 @@ describe('renderMosaic', () => {
     const avatars = createAvatars(5);
     renderMosaic(avatars, { style: 'detailed', theme: 'dark' });
 
-    expect(renderDetailed).toHaveBeenCalledWith(avatars, 'dark');
+    expect(renderDetailed).toHaveBeenCalledWith(avatars, 'dark', undefined);
+  });
+
+  it('passes dependentCount to renderDetailed', () => {
+    const avatars = createAvatars(5);
+    renderMosaic(avatars, { style: 'detailed', dependentCount: 1234 });
+
+    expect(renderDetailed).toHaveBeenCalledWith(avatars, undefined, 1234);
   });
 
   it('passes theme to renderMessage for empty input', () => {
@@ -161,5 +168,41 @@ describe('renderMosaic', () => {
 
     expect(svg).toContain('<style>');
     expect(svg).toContain('</style>');
+  });
+
+  it('renders badge pill when dependentCount is provided', () => {
+    const svg = renderMosaic(createAvatars(5), { dependentCount: 1234 });
+
+    expect(svg).toContain('Used by 1,234 repositories');
+    expect(svg).toContain('<rect');
+    expect(svg).toContain('class="badge-bg"');
+    expect(svg).toContain('rx="16"');
+  });
+
+  it('increases SVG height when dependentCount is provided', () => {
+    const svgWithout = renderMosaic(createAvatars(5));
+    const svgWith = renderMosaic(createAvatars(5), { dependentCount: 100 });
+
+    const heightWithout = parseInt(
+      svgWithout.match(/height="(\d+)"/)?.[1] ?? '0'
+    );
+    const heightWith = parseInt(svgWith.match(/height="(\d+)"/)?.[1] ?? '0');
+
+    // BADGE_GAP (12) + BADGE_HEIGHT (32) = 44
+    expect(heightWith).toBe(heightWithout + 44);
+  });
+
+  it('does not render badge when dependentCount is 0', () => {
+    const svg = renderMosaic(createAvatars(5), { dependentCount: 0 });
+
+    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('<rect');
+  });
+
+  it('does not render badge when dependentCount is undefined', () => {
+    const svg = renderMosaic(createAvatars(5));
+
+    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('<rect');
   });
 });

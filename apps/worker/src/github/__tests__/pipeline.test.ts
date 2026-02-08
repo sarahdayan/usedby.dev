@@ -10,9 +10,19 @@ vi.mock('../enrich-repos', () => ({
   enrichRepos: vi.fn(),
 }));
 
+vi.mock('../resolve-repo', () => ({
+  resolveGitHubRepo: vi.fn(),
+}));
+
+vi.mock('../fetch-dependent-count', () => ({
+  fetchDependentCount: vi.fn(),
+}));
+
 import { enrichRepos } from '../enrich-repos';
+import { fetchDependentCount } from '../fetch-dependent-count';
 import { refreshDependents } from '../pipeline';
 import { PROD_LIMITS } from '../pipeline-limits';
+import { resolveGitHubRepo } from '../resolve-repo';
 import { searchDependents } from '../search-dependents';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
@@ -22,8 +32,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+function stubDefaultMocks() {
+  vi.mocked(resolveGitHubRepo).mockResolvedValue(null);
+  vi.mocked(fetchDependentCount).mockResolvedValue(null);
+}
+
 describe('refreshDependents', () => {
   it('filters forks before enrichment, then filters archived and low-stars after', async () => {
+    stubDefaultMocks();
     const searchRepos: DependentRepo[] = [
       createRepo({ name: 'popular', stars: 1000 }),
       createRepo({ name: 'fork', stars: 500, isFork: true }),
@@ -78,6 +94,7 @@ describe('refreshDependents', () => {
   });
 
   it('returns correct CacheEntry shape', async () => {
+    stubDefaultMocks();
     vi.mocked(searchDependents).mockResolvedValue({
       repos: [],
       partial: false,
@@ -97,6 +114,7 @@ describe('refreshDependents', () => {
   });
 
   it('sets partial to true when search is rate-limited', async () => {
+    stubDefaultMocks();
     vi.mocked(searchDependents).mockResolvedValue({
       repos: [],
       partial: true,
@@ -111,6 +129,7 @@ describe('refreshDependents', () => {
   });
 
   it('sets partial to true when enrich is rate-limited', async () => {
+    stubDefaultMocks();
     vi.mocked(searchDependents).mockResolvedValue({
       repos: [],
       partial: false,
@@ -125,11 +144,66 @@ describe('refreshDependents', () => {
   });
 
   it('propagates errors from pipeline stages', async () => {
+    stubDefaultMocks();
     vi.mocked(searchDependents).mockRejectedValue(new Error('API error'));
 
     await expect(refreshDependents('react', ENV, NOW)).rejects.toThrow(
       'API error'
     );
+  });
+
+  it('includes dependentCount when resolution succeeds', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
+    vi.mocked(resolveGitHubRepo).mockResolvedValue({
+      owner: 'facebook',
+      repo: 'react',
+    });
+    vi.mocked(fetchDependentCount).mockResolvedValue(12345);
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result.dependentCount).toBe(12345);
+  });
+
+  it('omits dependentCount when repo resolution fails', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
+    vi.mocked(resolveGitHubRepo).mockResolvedValue(null);
+    vi.mocked(fetchDependentCount).mockResolvedValue(null);
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result.dependentCount).toBeUndefined();
+  });
+
+  it('omits dependentCount when count fetch fails', async () => {
+    vi.mocked(searchDependents).mockResolvedValue({
+      repos: [],
+      partial: false,
+      rateLimited: false,
+      capped: false,
+    });
+    vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
+    vi.mocked(resolveGitHubRepo).mockResolvedValue({
+      owner: 'facebook',
+      repo: 'react',
+    });
+    vi.mocked(fetchDependentCount).mockResolvedValue(null);
+
+    const result = await refreshDependents('react', ENV, NOW);
+
+    expect(result.dependentCount).toBeUndefined();
   });
 });
 

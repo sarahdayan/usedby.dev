@@ -27,6 +27,7 @@ export interface GetDependentsResult {
   repos: ScoredRepo[];
   fromCache: boolean;
   refreshing: boolean;
+  dependentCount?: number;
 }
 
 export async function getDependents(
@@ -56,7 +57,12 @@ export async function getDependents(
     );
     waitUntil(touchLastAccessed(kv, key, cached.entry, now));
 
-    return { repos: cached.entry.repos, fromCache: true, refreshing: false };
+    return {
+      repos: cached.entry.repos,
+      fromCache: true,
+      refreshing: false,
+      dependentCount: cached.entry.dependentCount,
+    };
   }
 
   if (cached.status === 'stale') {
@@ -72,14 +78,24 @@ export async function getDependents(
       backgroundRefresh(packageName, env, kv, key, cached.entry, now, limits)
     );
 
-    return { repos: cached.entry.repos, fromCache: true, refreshing: true };
+    return {
+      repos: cached.entry.repos,
+      fromCache: true,
+      refreshing: true,
+      dependentCount: cached.entry.dependentCount,
+    };
   }
 
   logger?.log('cache', 'miss');
   const entry = await refreshDependents(packageName, env, now, logger, limits);
   await writeCache(kv, key, entry);
 
-  return { repos: entry.repos, fromCache: false, refreshing: false };
+  return {
+    repos: entry.repos,
+    fromCache: false,
+    refreshing: false,
+    dependentCount: entry.dependentCount,
+  };
 }
 
 async function backgroundRefresh(

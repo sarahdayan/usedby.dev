@@ -63,4 +63,23 @@ describe('renderThemeStyle', () => {
       '.avatar-border{stroke:rgba(255,255,255,0.4);stroke-width:2}'
     );
   });
+
+  it('includes badge-bg for light', () => {
+    const style = renderThemeStyle('light');
+
+    expect(style).toContain('.badge-bg{fill:#f0f2f5}');
+  });
+
+  it('includes badge-bg for dark', () => {
+    const style = renderThemeStyle('dark');
+
+    expect(style).toContain('.badge-bg{fill:#272b33}');
+  });
+
+  it('includes badge-bg in both default and dark media query for auto', () => {
+    const style = renderThemeStyle('auto');
+
+    expect(style).toContain('.badge-bg{fill:#f0f2f5}');
+    expect(style).toContain('.badge-bg{fill:#272b33}');
+  });
 });

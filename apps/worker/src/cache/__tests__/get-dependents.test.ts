@@ -45,6 +45,7 @@ describe('getDependents', () => {
       repos: entry.repos,
       fromCache: true,
       refreshing: false,
+      dependentCount: undefined,
     });
     expect(refreshDependents).not.toHaveBeenCalled();
   });
@@ -83,6 +84,7 @@ describe('getDependents', () => {
       repos: entry.repos,
       fromCache: true,
       refreshing: true,
+      dependentCount: undefined,
     });
     expect(options.waitUntil).toHaveBeenCalledTimes(1);
 
@@ -175,6 +177,7 @@ describe('getDependents', () => {
       repos: entry.repos,
       fromCache: false,
       refreshing: false,
+      dependentCount: undefined,
     });
     expect(refreshDependents).toHaveBeenCalledWith(
       'react',
@@ -185,6 +188,41 @@ describe('getDependents', () => {
     );
     expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', entry);
     expect(options.waitUntil).not.toHaveBeenCalled();
+  });
+
+  it('passes through dependentCount on hit', async () => {
+    const entry = createEntry({ dependentCount: 5000 });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'hit', entry });
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const result = await getDependents(createOptions());
+
+    expect(result.dependentCount).toBe(5000);
+  });
+
+  it('passes through dependentCount on stale', async () => {
+    const entry = createEntry({ dependentCount: 3000 });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockResolvedValue(createEntry());
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const result = await getDependents(createOptions());
+
+    expect(result.dependentCount).toBe(3000);
+  });
+
+  it('passes through dependentCount on miss', async () => {
+    const entry = createEntry({ dependentCount: 999 });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(refreshDependents).mockResolvedValue(entry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const result = await getDependents(createOptions());
+
+    expect(result.dependentCount).toBe(999);
   });
 
   it('propagates pipeline errors on miss', async () => {

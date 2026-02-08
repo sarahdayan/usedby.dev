@@ -1,9 +1,11 @@
 import type { CacheEntry } from '../cache/types';
 import type { DevLogger } from '../dev-logger';
 import { enrichRepos } from './enrich-repos';
+import { fetchDependentCount } from './fetch-dependent-count';
 import { filterDependents } from './filter-dependents';
 import type { PipelineLimits } from './pipeline-limits';
 import { PROD_LIMITS } from './pipeline-limits';
+import { resolveGitHubRepo } from './resolve-repo';
 import { scoreDependents } from './score-dependents';
 import { searchDependents } from './search-dependents';
 
@@ -21,7 +23,10 @@ export async function refreshDependents(
   );
 
   logger?.time('search');
-  const searchResult = await searchDependents(packageName, env, logger, limits);
+  const [searchResult, dependentCount] = await Promise.all([
+    searchDependents(packageName, env, logger, limits),
+    resolveDependentCount(packageName, logger),
+  ]);
   logger?.timeEnd('search');
 
   // Filter forks before enrichment (reliably available from search).
@@ -71,5 +76,24 @@ export async function refreshDependents(
     fetchedAt: isoNow,
     lastAccessedAt: isoNow,
     partial,
+    ...(dependentCount != null && { dependentCount }),
   };
+}
+
+async function resolveDependentCount(
+  packageName: string,
+  logger?: DevLogger
+): Promise<number | null> {
+  logger?.log('dependent-count', `resolving ${packageName}`);
+  const ghRepo = await resolveGitHubRepo(packageName, logger);
+
+  if (!ghRepo) {
+    logger?.log('dependent-count', 'could not resolve GitHub repo');
+    return null;
+  }
+
+  const count = await fetchDependentCount(ghRepo.owner, ghRepo.repo, logger);
+  logger?.log('dependent-count', count != null ? String(count) : 'not found');
+
+  return count;
 }

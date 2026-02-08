@@ -240,4 +240,40 @@ describe('renderDetailed', () => {
       '<circle cx="33" cy="33" r="32" fill="none" class="avatar-border"/>'
     );
   });
+
+  it('renders badge pill when dependentCount is provided', () => {
+    const svg = renderDetailed(createAvatars(3), undefined, 5678);
+
+    expect(svg).toContain('Used by 5,678 repositories');
+    expect(svg).toContain('<rect');
+    expect(svg).toContain('class="badge-bg"');
+    expect(svg).toContain('rx="16"');
+  });
+
+  it('increases SVG height when dependentCount is provided', () => {
+    const svgWithout = renderDetailed(createAvatars(3));
+    const svgWith = renderDetailed(createAvatars(3), undefined, 100);
+
+    const heightWithout = parseInt(
+      svgWithout.match(/height="(\d+)"/)?.[1] ?? '0'
+    );
+    const heightWith = parseInt(svgWith.match(/height="(\d+)"/)?.[1] ?? '0');
+
+    // BADGE_GAP (12) + BADGE_HEIGHT (32) = 44
+    expect(heightWith).toBe(heightWithout + 44);
+  });
+
+  it('does not render badge when dependentCount is 0', () => {
+    const svg = renderDetailed(createAvatars(3), undefined, 0);
+
+    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('<rect');
+  });
+
+  it('does not render badge when dependentCount is undefined', () => {
+    const svg = renderDetailed(createAvatars(3));
+
+    expect(svg).not.toContain('Used by');
+    expect(svg).not.toContain('<rect');
+  });
 });

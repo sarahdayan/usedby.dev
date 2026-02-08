@@ -355,6 +355,41 @@ describe('worker', () => {
       }
     });
 
+    it('forwards dependentCount to renderMosaic', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+        dependentCount: 42000,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
+
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ dependentCount: 42000 })
+      );
+    });
+
+    it('forwards undefined dependentCount when not present', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      await worker.fetch(createRequest('/npm/react'), createEnv(), createCtx());
+
+      expect(renderMosaic).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ dependentCount: undefined })
+      );
+    });
+
     it('passes theme to renderMessage on error', async () => {
       vi.mocked(getDependents).mockRejectedValue(new Error('API failure'));
       vi.mocked(renderMessage).mockReturnValue(
