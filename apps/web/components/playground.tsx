@@ -156,7 +156,7 @@ export function Playground() {
             </div>
             <Slider
               value={[max]}
-              onValueChange={(v) => setMax(v[0])}
+              onValueChange={(v) => v[0] !== undefined && setMax(v[0])}
               min={1}
               max={100}
               step={1}
