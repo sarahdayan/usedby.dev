@@ -89,12 +89,12 @@ describe('renderMosaic', () => {
     expect(svg).toContain('height="64"');
   });
 
-  it('returns empty SVG for empty input', () => {
+  it('returns message SVG for empty input', () => {
     const svg = renderMosaic([]);
 
-    expect(svg).toContain('width="1"');
-    expect(svg).toContain('height="1"');
-    expect(svg).toContain('aria-label="No dependents"');
+    expect(svg).toContain('width="300"');
+    expect(svg).toContain('height="40"');
+    expect(svg).toContain('No dependents found');
     expect(svg).not.toContain('<image');
   });
 

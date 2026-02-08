@@ -13,6 +13,10 @@ vi.mock('../svg/render-mosaic', () => ({
   renderMosaic: vi.fn(),
 }));
 
+vi.mock('../svg/render-message', () => ({
+  renderMessage: vi.fn(),
+}));
+
 vi.mock('../scheduled/run-scheduled-refresh', () => ({
   runScheduledRefresh: vi.fn(),
 }));
@@ -20,6 +24,7 @@ vi.mock('../scheduled/run-scheduled-refresh', () => ({
 import { getDependents } from '../cache/get-dependents';
 import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
+import { renderMessage } from '../svg/render-message';
 import { renderMosaic } from '../svg/render-mosaic';
 import worker from '../index';
 
@@ -215,8 +220,11 @@ describe('worker', () => {
       });
     });
 
-    it('returns 500 on pipeline error', async () => {
+    it('returns 500 SVG on pipeline error', async () => {
       vi.mocked(getDependents).mockRejectedValue(new Error('API failure'));
+      vi.mocked(renderMessage).mockReturnValue(
+        '<svg xmlns="http://www.w3.org/2000/svg">Something went wrong</svg>'
+      );
       const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
@@ -229,8 +237,39 @@ describe('worker', () => {
         );
 
         expect(response.status).toBe(500);
-        expect(response.headers.get('content-type')).toBe('text/plain');
-        expect(await response.text()).toBe('Internal server error');
+        expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+        expect(await response.text()).toContain('Something went wrong');
+        expect(renderMessage).toHaveBeenCalledWith('Something went wrong');
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it('returns 500 SVG when fetchAvatars throws', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [createScoredRepo('app')],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockRejectedValue(new Error('network error'));
+      vi.mocked(renderMessage).mockReturnValue(
+        '<svg xmlns="http://www.w3.org/2000/svg">Something went wrong</svg>'
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      try {
+        const response = await worker.fetch(
+          createRequest('/facebook/react'),
+          createEnv(),
+          createCtx()
+        );
+
+        expect(response.status).toBe(500);
+        expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
+        expect(renderMessage).toHaveBeenCalledWith('Something went wrong');
       } finally {
         consoleSpy.mockRestore();
       }
@@ -264,6 +303,25 @@ describe('worker', () => {
 
       expect(response.status).toBe(405);
       expect(getDependents).not.toHaveBeenCalled();
+    });
+
+    it('allows HEAD requests', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+      });
+      vi.mocked(fetchAvatars).mockResolvedValue([]);
+      vi.mocked(renderMosaic).mockReturnValue('<svg></svg>');
+
+      const response = await worker.fetch(
+        createRequest('/facebook/react', 'HEAD'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
     });
   });
 

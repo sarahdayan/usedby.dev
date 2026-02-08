@@ -1,6 +1,7 @@
 import { getDependents } from './cache/get-dependents';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
+import { renderMessage } from './svg/render-message';
 import { renderMosaic } from './svg/render-mosaic';
 
 interface Env {
@@ -90,9 +91,12 @@ export default {
     } catch (error) {
       console.error('Pipeline error:', error);
 
-      return new Response('Internal server error', {
+      return new Response(renderMessage('Something went wrong'), {
         status: 500,
-        headers: { 'content-type': 'text/plain' },
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'no-store',
+        },
       });
     }
   },

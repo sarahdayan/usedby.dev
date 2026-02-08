@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeAttr, renderAvatar } from '../avatar';
+import { escapeXml, renderAvatar } from '../avatar';
 import type { AvatarData, AvatarPosition } from '../types';
 
 const avatar: AvatarData = {
@@ -66,30 +66,30 @@ describe('renderAvatar', () => {
   });
 });
 
-describe('escapeAttr', () => {
+describe('escapeXml', () => {
   it('escapes ampersands', () => {
-    expect(escapeAttr('a&b')).toBe('a&amp;b');
+    expect(escapeXml('a&b')).toBe('a&amp;b');
   });
 
   it('escapes double quotes', () => {
-    expect(escapeAttr('a"b')).toBe('a&quot;b');
+    expect(escapeXml('a"b')).toBe('a&quot;b');
   });
 
   it('escapes angle brackets', () => {
-    expect(escapeAttr('<script>')).toBe('&lt;script&gt;');
+    expect(escapeXml('<script>')).toBe('&lt;script&gt;');
   });
 
   it('escapes single quotes', () => {
-    expect(escapeAttr("it's")).toBe('it&#39;s');
+    expect(escapeXml("it's")).toBe('it&#39;s');
   });
 
   it('escapes all special characters together', () => {
-    expect(escapeAttr('<a href="x">&\'y</a>')).toBe(
+    expect(escapeXml('<a href="x">&\'y</a>')).toBe(
       '&lt;a href=&quot;x&quot;&gt;&amp;&#39;y&lt;/a&gt;'
     );
   });
 
   it('returns clean strings unchanged', () => {
-    expect(escapeAttr('facebook/react')).toBe('facebook/react');
+    expect(escapeXml('facebook/react')).toBe('facebook/react');
   });
 });

@@ -1,6 +1,7 @@
 import { DEFAULT_MAX, MAX_AVATARS } from './constants';
 import { renderAvatar } from './avatar';
 import { computeLayout, computePositions } from './layout';
+import { renderMessage } from './render-message';
 import type { AvatarData, RenderOptions } from './types';
 
 export function renderMosaic(
@@ -16,7 +17,7 @@ export function renderMosaic(
   const sliced = avatars.slice(0, max);
 
   if (sliced.length === 0) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1" role="img" aria-label="No dependents"></svg>';
+    return renderMessage('No dependents found');
   }
 
   const layout = computeLayout(sliced.length);
