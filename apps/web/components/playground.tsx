@@ -224,7 +224,7 @@ export function Playground() {
         </div>
 
         {/* Preview & embed codes */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* Preview */}
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border px-4 py-3">
