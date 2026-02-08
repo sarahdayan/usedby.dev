@@ -24,6 +24,10 @@ export function EmbedGenerator() {
   const normalized = input.trim();
   const isValid = VALID_PATTERN.test(normalized);
   const showHint = input.length > 0 && !isValid;
+  const hasChanges =
+    !generated ||
+    normalized !== generated ||
+    clampMax(maxInput) !== generatedMax;
 
   const displayPath = generated ? `npm/${generated}` : 'npm/package';
   const displayMax = generated ? generatedMax : DEFAULT_MAX;
@@ -122,7 +126,7 @@ export function EmbedGenerator() {
         </label>
         <button
           type="submit"
-          disabled={!isValid}
+          disabled={!isValid || !hasChanges}
           className="bg-code-bg text-code-fg font-mono text-[0.9375rem] px-7 rounded-xl cursor-pointer disabled:cursor-default disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-fg/20 max-sm:text-[0.8125rem] max-sm:px-5"
         >
           Generate
