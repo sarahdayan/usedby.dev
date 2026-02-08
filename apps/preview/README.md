@@ -1,4 +1,4 @@
-# @usedby.dev/preview
+# `@usedby.dev/preview`
 
 A lightweight Vite dev app for visually iterating on the SVG renderers before deploying.
 
