@@ -9,7 +9,3 @@ npm run dev
 ```
 
 Opens at [http://localhost:3000](http://localhost:3000).
-
-## Production auth
-
-A basic auth proxy (`proxy.ts`) protects the production site. Set `BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD` as environment variables in Vercel to enable it. When unset (local dev), requests pass through.
