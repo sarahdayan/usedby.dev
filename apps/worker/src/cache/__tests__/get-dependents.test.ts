@@ -202,6 +202,7 @@ function createScoredRepo(name: string): ScoredRepo {
     avatarUrl: 'https://example.com/avatar.png',
     isFork: false,
     archived: false,
+    packageJsonPath: 'package.json',
     score: 95,
   };
 }

@@ -138,6 +138,7 @@ function createRepo(
     avatarUrl: 'https://example.com/avatar.png',
     isFork: false,
     archived: false,
+    packageJsonPath: 'package.json',
     ...overrides,
   };
 }

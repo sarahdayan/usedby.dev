@@ -38,6 +38,7 @@ describe('enrichRepos', () => {
 
     const result = await enrichRepos(
       [createSkeletonRepo('acme/app'), createSkeletonRepo('corp/lib')],
+      'my-package',
       { GITHUB_TOKEN: 'fake-token' }
     );
 
@@ -52,6 +53,7 @@ describe('enrichRepos', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/99',
         isFork: false,
         archived: false,
+        packageJsonPath: 'package.json',
       },
       {
         owner: 'corp',
@@ -62,6 +64,7 @@ describe('enrichRepos', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/42',
         isFork: true,
         archived: true,
+        packageJsonPath: 'package.json',
       },
     ]);
   });
@@ -80,6 +83,7 @@ describe('enrichRepos', () => {
 
     const result = await enrichRepos(
       [createSkeletonRepo('acme/app'), createSkeletonRepo('deleted/repo')],
+      'my-package',
       { GITHUB_TOKEN: 'fake-token' }
     );
 
@@ -89,7 +93,9 @@ describe('enrichRepos', () => {
   });
 
   it('handles empty input', async () => {
-    const result = await enrichRepos([], { GITHUB_TOKEN: 'fake-token' });
+    const result = await enrichRepos([], 'my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
     expect(result.repos).toEqual([]);
     expect(result.rateLimited).toBe(false);
@@ -119,7 +125,9 @@ describe('enrichRepos', () => {
       createSkeletonRepo(`org/repo-${i}`)
     );
 
-    const result = await enrichRepos(repos, { GITHUB_TOKEN: 'fake-token' });
+    const result = await enrichRepos(repos, 'my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
     expect(requestCount).toBe(2);
     expect(result.repos).toHaveLength(75);
@@ -153,7 +161,9 @@ describe('enrichRepos', () => {
       createSkeletonRepo(`org/repo-${i}`)
     );
 
-    const result = await enrichRepos(repos, { GITHUB_TOKEN: 'fake-token' });
+    const result = await enrichRepos(repos, 'my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
     expect(result.repos).toHaveLength(50);
     expect(result.rateLimited).toBe(true);
@@ -169,9 +179,11 @@ describe('enrichRepos', () => {
       })
     );
 
-    const result = await enrichRepos([createSkeletonRepo('acme/app')], {
-      GITHUB_TOKEN: 'fake-token',
-    });
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/app')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
 
     expect(result.repos).toHaveLength(0);
     expect(result.rateLimited).toBe(true);
@@ -187,9 +199,11 @@ describe('enrichRepos', () => {
       })
     );
 
-    const result = await enrichRepos([createSkeletonRepo('acme/app')], {
-      GITHUB_TOKEN: 'fake-token',
-    });
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/app')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
 
     expect(result.repos).toHaveLength(0);
     expect(result.rateLimited).toBe(true);
@@ -206,14 +220,153 @@ describe('enrichRepos', () => {
     );
 
     await expect(
-      enrichRepos([createSkeletonRepo('acme/app')], {
+      enrichRepos([createSkeletonRepo('acme/app')], 'my-package', {
         GITHUB_TOKEN: 'fake-token',
       })
     ).rejects.toThrow();
   });
+
+  it('filters out repos where package is not an actual dependency', async () => {
+    server.use(
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({
+              stargazerCount: 500,
+              packageJson: {
+                text: JSON.stringify({
+                  dependencies: { 'my-package': '^1.0.0' },
+                }),
+              },
+            }),
+            repo_1: createGraphQLRepo({
+              stargazerCount: 300,
+              packageJson: {
+                text: JSON.stringify({
+                  description: 'Mentions my-package in description only',
+                }),
+              },
+            }),
+          },
+        });
+      })
+    );
+
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/app'), createSkeletonRepo('noise/repo')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
+
+    expect(result.repos).toHaveLength(1);
+    expect(result.repos[0]!.fullName).toBe('acme/app');
+  });
+
+  it('accepts packages in devDependencies and peerDependencies', async () => {
+    server.use(
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({
+              packageJson: {
+                text: JSON.stringify({
+                  devDependencies: { 'my-package': '^2.0.0' },
+                }),
+              },
+            }),
+            repo_1: createGraphQLRepo({
+              packageJson: {
+                text: JSON.stringify({
+                  peerDependencies: { 'my-package': '>=1.0.0' },
+                }),
+              },
+            }),
+          },
+        });
+      })
+    );
+
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/dev'), createSkeletonRepo('acme/peer')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
+
+    expect(result.repos).toHaveLength(2);
+  });
+
+  it('filters out repos with null packageJson (file deleted)', async () => {
+    server.use(
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({ packageJson: null }),
+          },
+        });
+      })
+    );
+
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/app')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
+
+    expect(result.repos).toHaveLength(0);
+  });
+
+  it('filters out repos with malformed JSON in packageJson', async () => {
+    server.use(
+      http.post('https://api.github.com/graphql', () => {
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo({
+              packageJson: { text: 'not valid json {{{' },
+            }),
+          },
+        });
+      })
+    );
+
+    const result = await enrichRepos(
+      [createSkeletonRepo('acme/app')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
+
+    expect(result.repos).toHaveLength(0);
+  });
+
+  it('uses packageJsonPath in GraphQL query expression', async () => {
+    let capturedQuery = '';
+
+    server.use(
+      http.post('https://api.github.com/graphql', async ({ request }) => {
+        const body = (await request.json()) as { query: string };
+        capturedQuery = body.query;
+
+        return HttpResponse.json({
+          data: {
+            repo_0: createGraphQLRepo(),
+          },
+        });
+      })
+    );
+
+    await enrichRepos(
+      [createSkeletonRepo('acme/app', 'packages/core/package.json')],
+      'my-package',
+      { GITHUB_TOKEN: 'fake-token' }
+    );
+
+    expect(capturedQuery).toContain('HEAD:packages/core/package.json');
+  });
 });
 
-function createSkeletonRepo(fullName: string): DependentRepo {
+function createSkeletonRepo(
+  fullName: string,
+  packageJsonPath = 'package.json'
+): DependentRepo {
   const [owner = '', name = ''] = fullName.split('/');
 
   return {
@@ -225,6 +378,7 @@ function createSkeletonRepo(fullName: string): DependentRepo {
     avatarUrl: 'https://avatars.githubusercontent.com/u/1',
     isFork: false,
     archived: false,
+    packageJsonPath,
   };
 }
 
@@ -234,6 +388,7 @@ function createGraphQLRepo(overrides?: {
   avatarUrl?: string;
   isFork?: boolean;
   isArchived?: boolean;
+  packageJson?: { text: string } | null;
 }) {
   return {
     stargazerCount: overrides?.stargazerCount ?? 100,
@@ -244,5 +399,11 @@ function createGraphQLRepo(overrides?: {
       avatarUrl:
         overrides?.avatarUrl ?? 'https://avatars.githubusercontent.com/u/1',
     },
+    packageJson:
+      'packageJson' in (overrides ?? {})
+        ? overrides!.packageJson
+        : {
+            text: JSON.stringify({ dependencies: { 'my-package': '^1.0.0' } }),
+          },
   };
 }

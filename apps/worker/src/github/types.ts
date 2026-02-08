@@ -7,6 +7,7 @@ export interface DependentRepo {
   avatarUrl: string;
   isFork: boolean;
   archived: boolean;
+  packageJsonPath: string;
 }
 
 export interface ScoredRepo extends DependentRepo {

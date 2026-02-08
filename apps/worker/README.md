@@ -13,12 +13,24 @@ flowchart TD
     B -- Miss --> E
 
     E --> F["Search<br/>GitHub code search<br/>for package.json files"]
-    F --> G["Enrich<br/>GitHub GraphQL API<br/>50 repos per request"]
-    G --> H["Filter & Score<br/>Remove forks, archived,<br/>low-star repos.<br/>Rank by stars × recency"]
-    H --> I[Fetch avatars]
-    I --> J[Render SVG mosaic]
-    J --> K[Write to KV cache]
+    F --> G["Pre-filter<br/>Remove forks"]
+    G --> H["Cap at 100 repos"]
+    H --> I["Enrich + Verify<br/>GraphQL: fetch metadata<br/>+ package.json content.<br/>Confirm package is an<br/>actual dependency"]
+    I --> J["Filter & Score<br/>Remove archived,<br/>low-star repos.<br/>Rank by stars × recency"]
+    J --> K[Fetch avatars]
+    K --> L[Render SVG mosaic]
+    L --> M[Write to KV cache]
 ```
+
+### Pipeline stages
+
+1. **Search** — Queries GitHub code search for `"packageName" filename:package.json` (up to 5 pages of 100 results). Matches include any `package.json` mentioning the name, which can produce false positives (mentions in descriptions, scripts, partial name matches).
+2. **Pre-filter** — Removes forks. Fork status from code search is reliable, so filtering early saves enrichment budget.
+3. **Cap** — Slices to 100 repos to stay within Cloudflare Workers' 50-subrequest limit (2 GraphQL batches of 50).
+4. **Enrich + Verify** — A single GraphQL query per batch fetches repo metadata (stars, archived status, last push) _and_ the matched `package.json` content via `object(expression: "HEAD:path")`. The file is parsed and verified: repos where the package is not listed in `dependencies`, `devDependencies`, `peerDependencies`, or `optionalDependencies` are discarded as false positives. This costs zero additional subrequests.
+5. **Filter & Score** — Removes archived repos and those with fewer than 5 stars. Remaining repos are ranked by `stars * recency_multiplier` (half-life decay over 1 year).
+6. **Fetch avatars** — Downloads avatar images for the top results.
+7. **Render** — Produces an SVG mosaic and writes it to KV cache.
 
 ## Endpoint
 

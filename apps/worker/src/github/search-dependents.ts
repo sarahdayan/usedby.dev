@@ -65,6 +65,7 @@ export async function searchDependents(
         avatarUrl: repo.owner.avatar_url,
         isFork: repo.fork,
         archived: false,
+        packageJsonPath: item.path,
       });
     }
 

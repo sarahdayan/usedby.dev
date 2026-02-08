@@ -58,6 +58,7 @@ describe('searchDependents', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
         archived: false,
+        packageJsonPath: 'package.json',
       },
       {
         owner: 'corp',
@@ -68,6 +69,7 @@ describe('searchDependents', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
         archived: false,
+        packageJsonPath: 'package.json',
       },
     ]);
     expect(results.partial).toBe(false);
@@ -231,6 +233,7 @@ describe('searchDependents', () => {
       avatarUrl: 'https://avatars.githubusercontent.com/u/42',
       isFork: true,
       archived: false,
+      packageJsonPath: 'package.json',
     });
   });
 

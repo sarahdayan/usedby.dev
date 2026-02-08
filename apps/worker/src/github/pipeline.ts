@@ -37,7 +37,7 @@ export async function refreshDependents(
 
   // Enrich only the capped set (adds real star counts + archived status).
   logger?.time('enrich');
-  const enrichResult = await enrichRepos(capped, env, logger);
+  const enrichResult = await enrichRepos(capped, packageName, env, logger);
   logger?.timeEnd('enrich');
 
   // Now filter with real data from enrichment, then score.
