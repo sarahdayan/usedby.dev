@@ -8,7 +8,7 @@
       "binding": "DEPENDENTS_CACHE",
       // Replace with the actual ID after running:
       // wrangler kv namespace create DEPENDENTS_CACHE
-      "id": "TODO",
+      "id": "f2cbeb92f0a54d8cbd8c6c9b0491916a",
     },
   ],
   "vars": {
