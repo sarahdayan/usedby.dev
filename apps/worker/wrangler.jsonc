@@ -16,6 +16,9 @@
   },
   // Secrets (set via `wrangler secret put <NAME>`):
   // - GITHUB_TOKEN: GitHub personal access token for code search API
+  "routes": [
+    { "pattern": "api.usedby.dev/*", "zone_name": "usedby.dev" },
+  ],
   "triggers": {
     "crons": ["0 4 * * *"],
   },
