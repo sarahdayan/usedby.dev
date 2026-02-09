@@ -1,4 +1,4 @@
-import { renderAvatar } from './avatar';
+import { escapeXml, renderAvatar } from './avatar';
 import {
   BADGE_FONT_SIZE,
   BADGE_GAP,
@@ -44,7 +44,7 @@ export function renderMosaic(
     const pillX = layout.width / 2 - pillWidth / 2;
     const pillY = layout.height + BADGE_GAP;
     const pillRx = BADGE_HEIGHT / 2;
-    badgeFragment = `<rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${BADGE_HEIGHT}" rx="${pillRx}" class="badge-bg"/><text x="${layout.width / 2}" y="${pillY + BADGE_HEIGHT / 2}" text-anchor="middle" dominant-baseline="central" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="${BADGE_FONT_SIZE}" font-weight="600">${label}</text>`;
+    badgeFragment = `<rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${BADGE_HEIGHT}" rx="${pillRx}" class="badge-bg"/><text x="${layout.width / 2}" y="${pillY + BADGE_HEIGHT / 2}" text-anchor="middle" dominant-baseline="central" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="${BADGE_FONT_SIZE}" font-weight="600">${escapeXml(label)}</text>`;
   }
 
   return [

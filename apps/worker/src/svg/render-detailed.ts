@@ -119,7 +119,7 @@ export function renderDetailed(
     const pillX = width / 2 - pillWidth / 2;
     const pillY = gridHeight + BADGE_GAP;
     const pillRx = BADGE_HEIGHT / 2;
-    badgeFragment = `<rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${BADGE_HEIGHT}" rx="${pillRx}" class="badge-bg"/><text x="${width / 2}" y="${pillY + BADGE_HEIGHT / 2}" text-anchor="middle" dominant-baseline="central" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="${BADGE_FONT_SIZE}" font-weight="600">${label}</text>`;
+    badgeFragment = `<rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${BADGE_HEIGHT}" rx="${pillRx}" class="badge-bg"/><text x="${width / 2}" y="${pillY + BADGE_HEIGHT / 2}" text-anchor="middle" dominant-baseline="central" class="text-secondary" font-family="system-ui, -apple-system, sans-serif" font-size="${BADGE_FONT_SIZE}" font-weight="600">${escapeXml(label)}</text>`;
   }
 
   return [
