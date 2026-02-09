@@ -63,6 +63,24 @@ Append query parameters to customize the output:
 4. **Render:** Generates an SVG image with avatars and metadata
 5. **Cache:** Serves results from Cloudflare KV with stale-while-revalidate (24h fresh, background refresh, 30-day eviction)
 
+## FAQ
+
+### Why does the first request take so long?
+
+On a cold start, usedby.dev queries the GitHub code search API, enriches each result with repository metadata, fetches avatars, and renders the SVG. This involves many sequential API calls and can take a while due to the GitHub API limitations and rate limits. Subsequent requests are served from cache and are near-instant.
+
+### Why are some well-known dependents missing?
+
+usedby.dev relies on [GitHub's code search API](https://docs.github.com/en/rest/search/search#search-code), which caps results at 1,000 per query and doesn't allow to sort results by stars. For very popular packages with tens or hundreds of thousands of dependents, only a subset is discoverable, so some may be missing from the results.
+
+### How fresh is the data?
+
+Results are cached for 24 hours. After that, the next request serves stale data while triggering a background refresh. Entries not accessed for 30 days are evicted.
+
+### Does this work with scoped packages?
+
+Yes. Scoped packages like `@scope/package` are fully supported, just use them in the URL as-is (e.g., `https://api.usedby.dev/npm/@scope/package`).
+
 ## Self-hosting
 
 usedby.dev is open source. You can deploy your own instance.
