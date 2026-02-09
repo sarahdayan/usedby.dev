@@ -13,7 +13,7 @@ Add this to your README or docs, replacing `your-package` with your npm package 
 ```md
 [![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)
 
-<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
+Generated with [usedby.dev](https://usedby.dev/)
 ```
 
 That's it. No API key, no sign-up, no config.
@@ -23,7 +23,7 @@ For scoped packages:
 ```md
 [![Used by](https://api.usedby.dev/npm/@your-scope/your-package)](https://github.com/your-org/your-repo/network/dependents)
 
-<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
+Generated with [usedby.dev](https://usedby.dev/)
 ```
 
 ## Customization
@@ -44,7 +44,7 @@ Append query parameters to customize the output:
 ```md
 [![Used by](https://api.usedby.dev/npm/your-package?style=detailed&max=10&sort=stars&theme=dark)](https://github.com/your-org/your-repo/network/dependents)
 
-<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
+Generated with [usedby.dev](https://usedby.dev/)
 ```
 
 **Mosaic view with 20 dependents:**
@@ -52,7 +52,7 @@ Append query parameters to customize the output:
 ```md
 [![Used by](https://api.usedby.dev/npm/your-package?max=20)](https://github.com/your-org/your-repo/network/dependents)
 
-<sub>Made with [usedby.dev](https://usedby.dev/).</sub>
+Generated with [usedby.dev](https://usedby.dev/)
 ```
 
 ## How it works

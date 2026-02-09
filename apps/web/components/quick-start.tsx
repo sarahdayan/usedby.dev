@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 
-const markdownSnippet = `[![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)`;
+const markdownSnippet = `[![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)
+Generated with [usedby.dev](https://usedby.dev/)`;
 
 const htmlSnippet = `<a href="https://github.com/your-org/your-repo/network/dependents">
   <img src="https://api.usedby.dev/npm/your-package" alt="Used by" />
-</a>`;
+</a>
+Generated with <a href="https://usedby.dev/">usedby.dev</a>`;
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -51,11 +53,11 @@ export function QuickStart() {
           Quick start
         </p>
         <h2 className="mt-4 text-balance text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          One line, that&apos;s it.
+          Copy, paste, done.
         </h2>
-        <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
-          Add a single line of Markdown to your README and let the world see who
-          depends on your library.
+        <p className="mt-4 max-w-3xl text-center text-lg leading-relaxed text-muted-foreground">
+          Add a snippet to your README and let the world see who depends on your
+          library.
         </p>
 
         <div className="mt-12 w-full max-w-3xl space-y-6">

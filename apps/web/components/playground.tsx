@@ -61,18 +61,18 @@ export function Playground() {
 
   const markdownEmbed = useMemo(() => {
     if (!packageName) return '';
-    if (dependentsUrl) {
-      return `[![Used by](${imageUrl})](${dependentsUrl})`;
-    }
-    return `![Used by](${imageUrl})`;
+    const img = dependentsUrl
+      ? `[![Used by](${imageUrl})](${dependentsUrl})`
+      : `![Used by](${imageUrl})`;
+    return `${img}\nGenerated with [usedby.dev](https://usedby.dev/)`;
   }, [packageName, imageUrl, dependentsUrl]);
 
   const htmlEmbed = useMemo(() => {
     if (!packageName) return '';
-    if (dependentsUrl) {
-      return `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>`;
-    }
-    return `<img src="${imageUrl}" alt="Used by" />`;
+    const img = dependentsUrl
+      ? `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>`
+      : `<img src="${imageUrl}" alt="Used by" />`;
+    return `${img}\nGenerated with <a href="https://usedby.dev/">usedby.dev</a>`;
   }, [packageName, imageUrl, dependentsUrl]);
 
   const handleLoadImage = () => {
