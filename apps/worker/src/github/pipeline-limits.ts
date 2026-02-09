@@ -5,6 +5,8 @@ export interface PipelineLimits {
   enrichCap: number;
   /** Repos per GraphQL batch request. GitHub GraphQL has a node/complexity limit. */
   batchSize: number;
+  /** Max enrichment batches to run concurrently. */
+  enrichConcurrency: number;
   /** Delay between search pages to avoid secondary rate limits (ms). */
   pageDelayMs: number;
   /** Minimum star count to survive post-enrichment filtering. */
@@ -19,6 +21,7 @@ export const FREE_LIMITS: PipelineLimits = {
   maxPages: 5,
   enrichCap: 100,
   batchSize: 50,
+  enrichConcurrency: 2,
   pageDelayMs: 6_500,
   minStars: 5,
   defaultMax: 35,
@@ -30,7 +33,8 @@ export const PAID_LIMITS: PipelineLimits = {
   maxPages: 10,
   enrichCap: 500,
   batchSize: 50,
-  pageDelayMs: 6_500,
+  enrichConcurrency: 3,
+  pageDelayMs: 4_000,
   minStars: 5,
   defaultMax: 100,
 };
@@ -43,7 +47,8 @@ export const DEV_LIMITS: PipelineLimits = {
   maxPages: 10,
   enrichCap: 500,
   batchSize: 50,
-  pageDelayMs: 2_000,
+  enrichConcurrency: 3,
+  pageDelayMs: 4_000,
   minStars: 5,
   defaultMax: 100,
 };

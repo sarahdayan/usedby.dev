@@ -2,7 +2,7 @@ import { Octokit } from '@octokit/rest';
 
 import type { DevLogger } from '../dev-logger';
 import type { PipelineLimits } from './pipeline-limits';
-import { PROD_LIMITS } from './pipeline-limits';
+import { PAID_LIMITS } from './pipeline-limits';
 import type { DependentRepo, EnrichResult } from './types';
 
 export async function enrichRepos(
@@ -10,7 +10,7 @@ export async function enrichRepos(
   packageName: string,
   env: { GITHUB_TOKEN: string },
   logger?: DevLogger,
-  limits: PipelineLimits = PROD_LIMITS
+  limits: PipelineLimits = PAID_LIMITS
 ): Promise<EnrichResult> {
   if (repos.length === 0) {
     return { repos: [], rateLimited: false };
@@ -21,57 +21,53 @@ export async function enrichRepos(
   const nullRepos: string[] = [];
   const falsePositives: string[] = [];
 
+  // Split repos into batches
+  const batches: DependentRepo[][] = [];
   for (let i = 0; i < repos.length; i += limits.batchSize) {
-    const batch = repos.slice(i, i + limits.batchSize);
-    const { query, variables } = buildGraphQLQuery(batch);
+    batches.push(repos.slice(i, i + limits.batchSize));
+  }
 
-    let data: Record<string, GraphQLRepoResult | null>;
+  const concurrency = limits.enrichConcurrency;
+  let rateLimited = false;
 
-    try {
-      data = await octokit.graphql<Record<string, GraphQLRepoResult | null>>(
-        query,
-        variables
-      );
-    } catch (error) {
-      if (isGraphQLRateLimited(error)) {
-        console.log(
-          `[enrichRepos] Rate limited after ${enriched.length} results, returning partial data`
-        );
+  // Process batches in concurrent waves
+  for (let i = 0; i < batches.length; i += concurrency) {
+    if (rateLimited) break;
 
-        return { repos: enriched, rateLimited: true };
+    const wave = batches.slice(i, i + concurrency);
+    const results = await Promise.allSettled(
+      wave.map((batch) => enrichBatch(octokit, batch, packageName))
+    );
+
+    // Collect successes and classify failures before deciding action.
+    // This prevents a non-rate-limit error from masking a rate limit
+    // (or vice versa) when multiple batches in a wave fail concurrently.
+    let unknownError: unknown = null;
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        enriched.push(...result.value.enriched);
+        nullRepos.push(...result.value.nullRepos);
+        falsePositives.push(...result.value.falsePositives);
+      } else if (isGraphQLRateLimited(result.reason)) {
+        rateLimited = true;
+      } else {
+        unknownError = result.reason;
       }
-
-      throw error;
     }
 
-    for (let j = 0; j < batch.length; j++) {
-      const result = data[`repo_${j}`];
+    if (unknownError && !rateLimited) {
+      throw unknownError;
+    }
 
-      if (result == null) {
-        nullRepos.push(batch[j]!.fullName);
-        continue;
-      }
-
-      if (!isDependency(result.packageJson, packageName)) {
-        falsePositives.push(batch[j]!.fullName);
-        continue;
-      }
-
-      const repo = batch[j]!;
-
-      enriched.push({
-        ...repo,
-        stars: result.stargazerCount,
-        lastPush: result.pushedAt ?? '',
-        avatarUrl: result.owner.avatarUrl,
-        isFork: result.isFork,
-        archived: result.isArchived,
-      });
+    if (rateLimited) {
+      console.log(
+        `[enrichRepos] Rate limited after ${enriched.length} results, returning partial data`
+      );
     }
   }
 
-  const batchCount = Math.ceil(repos.length / limits.batchSize);
-  const details: string[] = [`${batchCount} batches`];
+  const details: string[] = [`${batches.length} batches`];
   if (nullRepos.length > 0) details.push(`${nullRepos.length} null`);
   if (falsePositives.length > 0)
     details.push(`${falsePositives.length} false positives`);
@@ -83,7 +79,55 @@ export async function enrichRepos(
   if (falsePositives.length > 0)
     logger?.log('  false+', falsePositives.join(', '));
 
-  return { repos: enriched, rateLimited: false };
+  return { repos: enriched, rateLimited };
+}
+
+interface BatchResult {
+  enriched: DependentRepo[];
+  nullRepos: string[];
+  falsePositives: string[];
+}
+
+async function enrichBatch(
+  octokit: Octokit,
+  batch: DependentRepo[],
+  packageName: string
+): Promise<BatchResult> {
+  const { query, variables } = buildGraphQLQuery(batch);
+  const data = await octokit.graphql<Record<string, GraphQLRepoResult | null>>(
+    query,
+    variables
+  );
+
+  const enriched: DependentRepo[] = [];
+  const nullRepos: string[] = [];
+  const falsePositives: string[] = [];
+
+  for (let j = 0; j < batch.length; j++) {
+    const result = data[`repo_${j}`];
+
+    if (result == null) {
+      nullRepos.push(batch[j]!.fullName);
+      continue;
+    }
+
+    if (!isDependency(result.packageJson, packageName)) {
+      falsePositives.push(batch[j]!.fullName);
+      continue;
+    }
+
+    const repo = batch[j]!;
+    enriched.push({
+      ...repo,
+      stars: result.stargazerCount,
+      lastPush: result.pushedAt ?? '',
+      avatarUrl: result.owner.avatarUrl,
+      isFork: result.isFork,
+      archived: result.isArchived,
+    });
+  }
+
+  return { enriched, nullRepos, falsePositives };
 }
 
 interface GraphQLRepoResult {

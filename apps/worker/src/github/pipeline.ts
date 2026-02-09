@@ -4,7 +4,7 @@ import { enrichRepos } from './enrich-repos';
 import { fetchDependentCount } from './fetch-dependent-count';
 import { filterDependents } from './filter-dependents';
 import type { PipelineLimits } from './pipeline-limits';
-import { PROD_LIMITS } from './pipeline-limits';
+import { PAID_LIMITS } from './pipeline-limits';
 import { resolveGitHubRepo } from './resolve-repo';
 import { scoreDependents } from './score-dependents';
 import { searchDependents } from './search-dependents';
@@ -14,9 +14,9 @@ export async function refreshDependents(
   env: { GITHUB_TOKEN: string },
   now: Date = new Date(),
   logger?: DevLogger,
-  limits: PipelineLimits = PROD_LIMITS
+  limits: PipelineLimits = PAID_LIMITS
 ): Promise<CacheEntry> {
-  const mode = limits === PROD_LIMITS ? 'prod' : 'dev';
+  const mode = limits === PAID_LIMITS ? 'prod' : 'dev';
   logger?.log(
     'limits',
     `${mode} (maxPages=${limits.maxPages}, enrichCap=${limits.enrichCap}, minStars=${limits.minStars})`
