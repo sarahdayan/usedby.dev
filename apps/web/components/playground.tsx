@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,66 +10,6 @@ type Style = 'mosaic' | 'detailed';
 type Sort = 'score' | 'stars';
 type Theme = 'auto' | 'light' | 'dark';
 
-function ToggleGroup<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { label: string; value: T }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-lg border border-border bg-secondary/50 p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            value === opt.value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-      aria-label={`Copy ${label}`}
-    >
-      {copied ? (
-        <>
-          <CheckIcon className="h-3.5 w-3.5 text-accent" />
-          Copied
-        </>
-      ) : (
-        <>
-          <CopyIcon className="h-3.5 w-3.5" />
-          Copy {label}
-        </>
-      )}
-    </button>
-  );
-}
-
 export function Playground() {
   const [packageName, setPackageName] = useState('dinero.js');
   const [max, setMax] = useState(30);
@@ -77,27 +17,41 @@ export function Playground() {
   const [sort, setSort] = useState<Sort>('score');
   const [theme, setTheme] = useState<Theme>('auto');
   const [imageLoaded, setImageLoaded] = useState(true);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [activePackage, setActivePackage] = useState('');
+  const [debouncedMax, setDebouncedMax] = useState(max);
+  const maxTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const buildUrl = useCallback(
-    (pkg: string) => {
-      if (!pkg) return '';
-      const base = `https://api.usedby.dev/npm/${encodeURIComponent(pkg)}`;
-      const params = new URLSearchParams();
-      if (style !== 'mosaic') params.set('style', style);
-      if (max !== 35) params.set('max', String(max));
-      if (sort !== 'score') params.set('sort', sort);
-      if (theme !== 'auto') params.set('theme', theme);
-      const qs = params.toString();
-      return qs ? `${base}?${qs}` : base;
-    },
-    [style, max, sort, theme]
+  function buildUrl(pkg: string, maxValue: number) {
+    if (!pkg) return '';
+    const base = `https://api.usedby.dev/npm/${encodeURIComponent(pkg)}`;
+    const params = new URLSearchParams();
+    if (style !== 'mosaic') params.set('style', style);
+    if (maxValue !== 35) params.set('max', String(maxValue));
+    if (sort !== 'score') params.set('sort', sort);
+    if (theme !== 'auto') params.set('theme', theme);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  }
+
+  const imageUrl = buildUrl(packageName, max);
+
+  const previewUrl = useMemo(
+    () => buildUrl(activePackage, debouncedMax),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activePackage, style, sort, theme, debouncedMax]
   );
 
-  const imageUrl = useMemo(
-    () => buildUrl(packageName),
-    [packageName, buildUrl]
-  );
+  useEffect(() => {
+    if (!activePackage) return;
+    setImageLoaded(false);
+  }, [previewUrl, activePackage]);
+
+  useEffect(() => {
+    if (!activePackage) return;
+    clearTimeout(maxTimerRef.current);
+    maxTimerRef.current = setTimeout(() => setDebouncedMax(max), 300);
+    return () => clearTimeout(maxTimerRef.current);
+  }, [max, activePackage]);
 
   const markdownEmbed = useMemo(() => {
     if (!packageName) return '';
@@ -110,9 +64,9 @@ export function Playground() {
   }, [packageName, imageUrl]);
 
   const handleLoadImage = () => {
-    if (!imageUrl) return;
-    setImageLoaded(false);
-    setPreviewUrl(imageUrl);
+    if (!packageName) return;
+    setDebouncedMax(max);
+    setActivePackage(packageName);
   };
 
   return (
@@ -224,13 +178,15 @@ export function Playground() {
                 Preview
               </span>
             </div>
-            <div className="relative min-h-[200px] p-4">
+            <div
+              className={`relative min-h-[200px] p-4 ${theme === 'light' ? 'bg-foreground' : ''}`}
+            >
               {!imageLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                 </div>
               )}
-              {previewUrl ? (
+              {activePackage ? (
                 <img
                   key={previewUrl}
                   src={previewUrl}
@@ -281,5 +237,72 @@ export function Playground() {
         </div>
       </div>
     </section>
+  );
+}
+
+interface ToggleGroupProps<T extends string> {
+  options: { label: string; value: T }[];
+  value: T;
+  onChange: (v: T) => void;
+}
+
+function ToggleGroup<T extends string>({
+  options,
+  value,
+  onChange,
+}: ToggleGroupProps<T>) {
+  return (
+    <div className="inline-flex rounded-lg border border-border bg-secondary/50 p-0.5">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+            value === opt.value
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface CopyButtonProps {
+  text: string;
+  label: string;
+}
+
+function CopyButton({ text, label }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  async function onCopy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      aria-label={`Copy ${label}`}
+    >
+      {copied ? (
+        <>
+          <CheckIcon className="h-3.5 w-3.5 text-accent" />
+          Copied
+        </>
+      ) : (
+        <>
+          <CopyIcon className="h-3.5 w-3.5" />
+          Copy {label}
+        </>
+      )}
+    </button>
   );
 }
