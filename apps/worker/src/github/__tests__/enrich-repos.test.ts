@@ -338,12 +338,15 @@ describe('enrichRepos', () => {
   });
 
   it('uses packageJsonPath in GraphQL query expression', async () => {
-    let capturedQuery = '';
+    let capturedVariables: Record<string, string> = {};
 
     server.use(
       http.post('https://api.github.com/graphql', async ({ request }) => {
-        const body = (await request.json()) as { query: string };
-        capturedQuery = body.query;
+        const body = (await request.json()) as {
+          query: string;
+          variables: Record<string, string>;
+        };
+        capturedVariables = body.variables;
 
         return HttpResponse.json({
           data: {
@@ -359,7 +362,7 @@ describe('enrichRepos', () => {
       { GITHUB_TOKEN: 'fake-token' }
     );
 
-    expect(capturedQuery).toContain('HEAD:packages/core/package.json');
+    expect(capturedVariables.expr_0).toBe('HEAD:packages/core/package.json');
   });
 });
 

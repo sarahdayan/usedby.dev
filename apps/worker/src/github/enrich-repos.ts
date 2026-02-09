@@ -23,13 +23,15 @@ export async function enrichRepos(
 
   for (let i = 0; i < repos.length; i += limits.batchSize) {
     const batch = repos.slice(i, i + limits.batchSize);
-    const query = buildGraphQLQuery(batch);
+    const { query, variables } = buildGraphQLQuery(batch);
 
     let data: Record<string, GraphQLRepoResult | null>;
 
     try {
-      data =
-        await octokit.graphql<Record<string, GraphQLRepoResult | null>>(query);
+      data = await octokit.graphql<Record<string, GraphQLRepoResult | null>>(
+        query,
+        variables
+      );
     } catch (error) {
       if (isGraphQLRateLimited(error)) {
         console.log(
@@ -93,23 +95,37 @@ interface GraphQLRepoResult {
   packageJson: { text: string } | null;
 }
 
-function buildGraphQLQuery(repos: DependentRepo[]): string {
-  const fragments = repos.map((repo, i) => {
-    const owner = repo.owner.replace(/[^a-zA-Z0-9_.-]/g, '');
-    const name = repo.name.replace(/[^a-zA-Z0-9_.-]/g, '');
-    const path = repo.packageJsonPath.replace(/[^a-zA-Z0-9_./@-]/g, '');
+function buildGraphQLQuery(repos: DependentRepo[]): {
+  query: string;
+  variables: Record<string, string>;
+} {
+  const variables: Record<string, string> = {};
 
-    return `repo_${i}: repository(owner: "${owner}", name: "${name}") {
+  const varDeclarations = repos
+    .map(
+      (_, i) => `$owner_${i}: String!, $name_${i}: String!, $expr_${i}: String!`
+    )
+    .join(', ');
+
+  const fragments = repos.map((repo, i) => {
+    variables[`owner_${i}`] = repo.owner;
+    variables[`name_${i}`] = repo.name;
+    variables[`expr_${i}`] = `HEAD:${repo.packageJsonPath}`;
+
+    return `repo_${i}: repository(owner: $owner_${i}, name: $name_${i}) {
       stargazerCount
       isArchived
       isFork
       pushedAt
       owner { avatarUrl }
-      packageJson: object(expression: "HEAD:${path}") { ... on Blob { text } }
+      packageJson: object(expression: $expr_${i}) { ... on Blob { text } }
     }`;
   });
 
-  return `{ ${fragments.join('\n')} }`;
+  return {
+    query: `query(${varDeclarations}) { ${fragments.join('\n')} }`,
+    variables,
+  };
 }
 
 const DEP_KEYS = [
