@@ -62,17 +62,17 @@ export function Playground() {
   const markdownEmbed = useMemo(() => {
     if (!packageName) return '';
     if (dependentsUrl) {
-      return `[![Dependents](${imageUrl})](${dependentsUrl})`;
+      return `[![Used by](${imageUrl})](${dependentsUrl})`;
     }
-    return `![Dependents](${imageUrl})`;
+    return `![Used by](${imageUrl})`;
   }, [packageName, imageUrl, dependentsUrl]);
 
   const htmlEmbed = useMemo(() => {
     if (!packageName) return '';
     if (dependentsUrl) {
-      return `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Dependents" />\n</a>`;
+      return `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>`;
     }
-    return `<img src="${imageUrl}" alt="Dependents" />`;
+    return `<img src="${imageUrl}" alt="Used by" />`;
   }, [packageName, imageUrl, dependentsUrl]);
 
   const handleLoadImage = () => {
@@ -210,8 +210,9 @@ export function Playground() {
               className={`relative min-h-[200px] p-4 ${theme === 'light' ? 'bg-foreground' : ''}`}
             >
               {!imageLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                  <LoadingMessage />
                 </div>
               )}
               {activePackage ? (
@@ -296,6 +297,41 @@ function ToggleGroup<T extends string>({
         </button>
       ))}
     </div>
+  );
+}
+
+const LOADING_MESSAGES = [
+  'Searching GitHub for dependents\u2026',
+  'This can take a while on a cold start\u2026',
+  'Checking package.json files\u2026',
+  'Enriching repository metadata\u2026',
+  'Politely asking GitHub for more data\u2026',
+  'Filtering out forks and noise\u2026',
+  'Scoring and ranking results\u2026',
+  'Fetching project avatars\u2026',
+  'Still going, not stuck\u2026',
+  'Rendering the image\u2026',
+  'GitHub rate limits are keeping us honest',
+  'Wrapping things up\u2026',
+  'Seriously, almost there\u2026',
+  'Worth the wait, I promise\u2026',
+];
+
+function LoadingMessage() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => setIndex((i) => (i + 1) % LOADING_MESSAGES.length),
+      2000
+    );
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <p key={index} className="animate-fade-in text-xs text-muted-foreground">
+      {LOADING_MESSAGES[index]}
+    </p>
   );
 }
 
