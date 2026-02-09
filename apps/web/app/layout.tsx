@@ -18,6 +18,25 @@ export const metadata: Metadata = {
   title: 'usedby.dev — Showcase your open-source dependents',
   description:
     'A free service that lets open-source maintainers showcase which projects depend on their library via a single embeddable image. No API key, no sign-up, no config.',
+  metadataBase: new URL('https://usedby.dev'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'usedby.dev — Showcase your open-source dependents',
+    description:
+      'Generate a beautiful embeddable image showing the top dependents of any npm package. One line of Markdown, zero config.',
+    url: 'https://usedby.dev',
+    siteName: 'usedby.dev',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {
