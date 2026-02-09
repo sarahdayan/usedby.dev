@@ -22,7 +22,7 @@ export async function refreshDependents(
     `${mode} (maxPages=${limits.maxPages}, enrichCap=${limits.enrichCap}, minStars=${limits.minStars})`
   );
 
-  logger?.time('search');
+  logger?.timeStart('search');
   const [searchResult, dependentCount] = await Promise.all([
     searchDependents(packageName, env, logger, limits),
     resolveDependentCount(packageName, logger),
@@ -50,7 +50,7 @@ export async function refreshDependents(
   const capped = preFiltered.slice(0, limits.enrichCap);
 
   // Enrich only the capped set (adds real star counts + archived status).
-  logger?.time('enrich');
+  logger?.timeStart('enrich');
   const enrichResult = await enrichRepos(
     capped,
     packageName,

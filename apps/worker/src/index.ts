@@ -157,7 +157,7 @@ export default {
       }
     }
 
-    logger.time('total');
+    logger.timeStart('total');
     logger.log('request', `GET /${platform}/${packageName}`);
 
     try {
@@ -175,7 +175,7 @@ export default {
         sort === 'stars' ? [...repos].sort((a, b) => b.stars - a.stars) : repos;
       const displayRepos = sorted.slice(0, max ?? limits.defaultMax);
 
-      logger.time('avatars');
+      logger.timeStart('avatars');
       const avatars = await fetchAvatars(displayRepos);
       logger.timeEnd('avatars');
       logger.log('avatars', `${avatars.length} fetched`);

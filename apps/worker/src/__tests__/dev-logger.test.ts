@@ -25,7 +25,7 @@ describe('DevLogger', () => {
 
     it('does not start timers', () => {
       const logger = new DevLogger(false);
-      logger.time('search');
+      logger.timeStart('search');
       logger.timeEnd('search');
       logger.summary();
 
@@ -58,13 +58,13 @@ describe('DevLogger', () => {
     });
   });
 
-  describe('time / timeEnd', () => {
+  describe('time', () => {
     it('attaches elapsed time to matching log entry', () => {
       vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1250);
 
       const logger = new DevLogger(true);
       logger.log('search', '42 repos');
-      logger.time('search');
+      logger.timeStart('search');
       logger.timeEnd('search');
       logger.summary();
 
@@ -77,7 +77,7 @@ describe('DevLogger', () => {
       vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1500);
 
       const logger = new DevLogger(true);
-      logger.time('total');
+      logger.timeStart('total');
       logger.timeEnd('total');
       logger.summary();
 
@@ -98,11 +98,10 @@ describe('DevLogger', () => {
       const logger = new DevLogger(true);
       logger.log('search', 'first');
       logger.log('search', 'second');
-      logger.time('search');
+      logger.timeStart('search');
       logger.timeEnd('search');
       logger.summary();
 
-      // The time should be attached to the second (last) entry
       expect(consoleSpy).toHaveBeenNthCalledWith(1, '[dev]   search   first');
       expect(consoleSpy).toHaveBeenNthCalledWith(
         2,
@@ -144,14 +143,13 @@ describe('DevLogger', () => {
 
       const logger = new DevLogger(true);
       logger.log('search', '42 repos');
-      logger.time('search');
+      logger.timeStart('search');
       logger.timeEnd('search');
       logger.log('enrich', '40 repos');
-      logger.time('enrich');
+      logger.timeStart('enrich');
       logger.timeEnd('enrich');
       logger.summary();
 
-      // Times should be right-aligned in an 8-char column
       expect(consoleSpy).toHaveBeenNthCalledWith(
         1,
         '[dev]   search   42 repos       5ms'
@@ -166,11 +164,10 @@ describe('DevLogger', () => {
       vi.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValueOnce(2571);
 
       const logger = new DevLogger(true);
-      logger.time('total');
+      logger.timeStart('total');
       logger.timeEnd('total');
       logger.summary();
 
-      // No gap between empty message and time
       expect(consoleSpy).toHaveBeenCalledWith('[dev]   total     2571ms');
     });
   });

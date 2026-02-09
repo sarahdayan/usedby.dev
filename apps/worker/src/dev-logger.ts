@@ -1,9 +1,14 @@
 const PREFIX = '[dev]';
 
+type Entry = {
+  label: string;
+  message: string;
+  time?: string;
+};
+
 export class DevLogger {
   private enabled: boolean;
-  private entries: Array<{ label: string; message: string; time?: string }> =
-    [];
+  private entries: Entry[] = [];
   private timers = new Map<string, number>();
 
   constructor(enabled: boolean) {
@@ -18,7 +23,7 @@ export class DevLogger {
     this.entries.push({ label, message });
   }
 
-  time(label: string): void {
+  timeStart(label: string): void {
     if (!this.enabled) {
       return;
     }
@@ -42,10 +47,12 @@ export class DevLogger {
     const elapsed = Date.now() - start;
     const ms = `${elapsed}ms`;
 
-    let existing: (typeof this.entries)[number] | undefined;
+    let existing: Entry[][number] | undefined;
+
     for (let i = this.entries.length - 1; i >= 0; i--) {
       if (this.entries[i]!.label === label) {
         existing = this.entries[i];
+
         break;
       }
     }
