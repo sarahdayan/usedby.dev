@@ -245,7 +245,7 @@ describe('getDependents', () => {
 
     const kv = createMockKV();
     const lockKey = buildLockKey('npm:react');
-    vi.mocked(kv.get).mockImplementation((key: string) =>
+    (kv.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
       Promise.resolve(key === lockKey ? '1' : null)
     );
 
