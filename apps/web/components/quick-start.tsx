@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 
-const markdownSnippet = `[![Dependents](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)`;
+const markdownSnippet = `[![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)`;
 
 const htmlSnippet = `<a href="https://github.com/your-org/your-repo/network/dependents">
-  <img src="https://api.usedby.dev/npm/your-package" alt="Dependents" />
+  <img src="https://api.usedby.dev/npm/your-package" alt="Used by" />
 </a>`;
 
 function CopyButton({ text }: { text: string }) {
