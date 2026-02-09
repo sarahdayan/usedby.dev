@@ -24,7 +24,7 @@ export function Playground() {
 
   function buildUrl(pkg: string, maxValue: number) {
     if (!pkg) return '';
-    const base = `https://api.usedby.dev/npm/${encodeURIComponent(pkg)}`;
+    const base = `https://api.usedby.dev/npm/${pkg}`;
     const params = new URLSearchParams();
     if (style !== 'mosaic') params.set('style', style);
     if (maxValue !== 35) params.set('max', String(maxValue));
