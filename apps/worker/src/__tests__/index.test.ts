@@ -838,6 +838,30 @@ describe('worker', () => {
       expect(firstUrl).toBe(secondUrl);
     });
 
+    it('strips unknown query params from cache key', async () => {
+      const cachedResponse = new Response('<svg>cached</svg>', {
+        headers: { 'Content-Type': 'image/svg+xml' },
+      });
+      mockCache.match.mockResolvedValue(cachedResponse);
+
+      await worker.fetch(
+        createRequest('/npm/react?max=10'),
+        createEnv(),
+        createCtx()
+      );
+
+      await worker.fetch(
+        createRequest('/npm/react?max=10&_bust=123'),
+        createEnv(),
+        createCtx()
+      );
+
+      const firstUrl = (mockCache.match.mock.calls[0]![0] as Request).url;
+      const secondUrl = (mockCache.match.mock.calls[1]![0] as Request).url;
+
+      expect(firstUrl).toBe(secondUrl);
+    });
+
     it('skips cache.match in dev mode', async () => {
       vi.mocked(getDependents).mockResolvedValue({
         repos: [],

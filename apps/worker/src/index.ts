@@ -135,8 +135,12 @@ export default {
     const limits = getLimits(isDev);
 
     const cache = caches.default;
-    url.searchParams.sort();
-    const cacheKey = new Request(url.toString(), request);
+    const canonicalUrl = new URL(`${url.origin}/${platform}/${packageName}`);
+    if (max !== undefined) canonicalUrl.searchParams.set('max', String(max));
+    if (style !== undefined) canonicalUrl.searchParams.set('style', style);
+    if (sort !== undefined) canonicalUrl.searchParams.set('sort', sort);
+    if (theme !== undefined) canonicalUrl.searchParams.set('theme', theme);
+    const cacheKey = new Request(canonicalUrl.toString(), request);
 
     if (!isDev) {
       const cached = await cache.match(cacheKey);
