@@ -43,7 +43,9 @@ export async function refreshDependents(
     'pre-filter',
     `${searchResult.repos.length} \u2192 ${preFiltered.length} (removed ${forks.length} forks)`
   );
-  if (forks.length > 0) logger?.log('  forks', forks.join(', '));
+  if (forks.length > 0) {
+    logger?.log('  forks', forks.join(', '));
+  }
 
   const capped = preFiltered.slice(0, limits.enrichCap);
 

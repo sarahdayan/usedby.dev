@@ -23,13 +23,23 @@ export function Playground() {
   const maxTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   function buildUrl(pkg: string, maxValue: number) {
-    if (!pkg) return '';
+    if (!pkg) {
+      return '';
+    }
     const base = `https://api.usedby.dev/npm/${pkg}`;
     const params = new URLSearchParams();
-    if (style !== 'mosaic') params.set('style', style);
-    if (maxValue !== 35) params.set('max', String(maxValue));
-    if (sort !== 'score') params.set('sort', sort);
-    if (theme !== 'auto') params.set('theme', theme);
+    if (style !== 'mosaic') {
+      params.set('style', style);
+    }
+    if (maxValue !== 35) {
+      params.set('max', String(maxValue));
+    }
+    if (sort !== 'score') {
+      params.set('sort', sort);
+    }
+    if (theme !== 'auto') {
+      params.set('theme', theme);
+    }
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
   }
@@ -43,12 +53,16 @@ export function Playground() {
   );
 
   useEffect(() => {
-    if (!activePackage) return;
+    if (!activePackage) {
+      return;
+    }
     setImageLoaded(false);
   }, [previewUrl]); // activePackage is already a dependency of previewUrl
 
   useEffect(() => {
-    if (!activePackage) return;
+    if (!activePackage) {
+      return;
+    }
     clearTimeout(maxTimerRef.current);
     maxTimerRef.current = setTimeout(() => setDebouncedMax(max), 300);
     return () => clearTimeout(maxTimerRef.current);
@@ -60,7 +74,9 @@ export function Playground() {
     : '';
 
   const markdownEmbed = useMemo(() => {
-    if (!packageName) return '';
+    if (!packageName) {
+      return '';
+    }
     const img = dependentsUrl
       ? `[![Used by](${imageUrl})](${dependentsUrl})`
       : `![Used by](${imageUrl})`;
@@ -68,7 +84,9 @@ export function Playground() {
   }, [packageName, imageUrl, dependentsUrl]);
 
   const htmlEmbed = useMemo(() => {
-    if (!packageName) return '';
+    if (!packageName) {
+      return '';
+    }
     const img = dependentsUrl
       ? `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Used by" />\n</a>`
       : `<img src="${imageUrl}" alt="Used by" />`;
@@ -76,7 +94,9 @@ export function Playground() {
   }, [packageName, imageUrl, dependentsUrl]);
 
   const handleLoadImage = () => {
-    if (!packageName) return;
+    if (!packageName) {
+      return;
+    }
     setDebouncedMax(max);
     setActivePackage(packageName);
   };

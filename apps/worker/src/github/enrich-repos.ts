@@ -32,7 +32,9 @@ export async function enrichRepos(
 
   // Process batches in concurrent waves
   for (let i = 0; i < batches.length; i += concurrency) {
-    if (rateLimited) break;
+    if (rateLimited) {
+      break;
+    }
 
     const wave = batches.slice(i, i + concurrency);
     const results = await Promise.allSettled(
@@ -68,16 +70,22 @@ export async function enrichRepos(
   }
 
   const details: string[] = [`${batches.length} batches`];
-  if (nullRepos.length > 0) details.push(`${nullRepos.length} null`);
-  if (falsePositives.length > 0)
+  if (nullRepos.length > 0) {
+    details.push(`${nullRepos.length} null`);
+  }
+  if (falsePositives.length > 0) {
     details.push(`${falsePositives.length} false positives`);
+  }
   logger?.log(
     'enrich',
     `${repos.length} \u2192 ${enriched.length} (${details.join(', ')})`
   );
-  if (nullRepos.length > 0) logger?.log('  null', nullRepos.join(', '));
-  if (falsePositives.length > 0)
+  if (nullRepos.length > 0) {
+    logger?.log('  null', nullRepos.join(', '));
+  }
+  if (falsePositives.length > 0) {
     logger?.log('  false+', falsePositives.join(', '));
+  }
 
   return { repos: enriched, rateLimited };
 }
@@ -183,7 +191,9 @@ function isDependency(
   packageJson: { text: string } | null,
   packageName: string
 ): boolean {
-  if (packageJson?.text == null) return false;
+  if (packageJson?.text == null) {
+    return false;
+  }
 
   try {
     const parsed = JSON.parse(packageJson.text) as Record<string, unknown>;

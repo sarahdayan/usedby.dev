@@ -25,19 +25,30 @@ export function filterDependents(
   }
 
   const reasons: string[] = [];
-  if (forks.length > 0) reasons.push(`${forks.length} forks`);
-  if (archived.length > 0) reasons.push(`${archived.length} archived`);
-  if (lowStars.length > 0)
+  if (forks.length > 0) {
+    reasons.push(`${forks.length} forks`);
+  }
+  if (archived.length > 0) {
+    reasons.push(`${archived.length} archived`);
+  }
+  if (lowStars.length > 0) {
     reasons.push(`${lowStars.length} <${minStars}\u2605`);
+  }
 
   logger?.log(
     'filter',
     `${repos.length} \u2192 ${kept.length} (${reasons.join(', ')})`
   );
 
-  if (forks.length > 0) logger?.log('  forks', forks.join(', '));
-  if (archived.length > 0) logger?.log('  archived', archived.join(', '));
-  if (lowStars.length > 0) logger?.log('  low-stars', lowStars.join(', '));
+  if (forks.length > 0) {
+    logger?.log('  forks', forks.join(', '));
+  }
+  if (archived.length > 0) {
+    logger?.log('  archived', archived.join(', '));
+  }
+  if (lowStars.length > 0) {
+    logger?.log('  low-stars', lowStars.join(', '));
+  }
 
   return kept;
 }
