@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export function Hero() {
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  const imgRef = useCallback((img: HTMLImageElement | null) => {
+    if (img?.complete) {
+      setImageLoaded(true);
+    }
+  }, []);
 
   return (
     <section className="relative overflow-hidden">
@@ -70,6 +76,7 @@ export function Hero() {
                 </div>
               )}
               <img
+                ref={imgRef}
                 src="https://api.usedby.dev/npm/dinero.js?max=40"
                 alt="Live demo showing top dependents of the dinero.js npm package including their avatars, names, and star counts"
                 className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}

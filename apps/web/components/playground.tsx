@@ -77,7 +77,7 @@ export function Playground() {
   const [sort, setSort] = useState<Sort>('score');
   const [theme, setTheme] = useState<Theme>('auto');
   const [imageLoaded, setImageLoaded] = useState(true);
-  const [imageKey, setImageKey] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const buildUrl = useCallback(
     (pkg: string) => {
@@ -110,8 +110,9 @@ export function Playground() {
   }, [packageName, imageUrl]);
 
   const handleLoadImage = () => {
+    if (!imageUrl) return;
     setImageLoaded(false);
-    setImageKey((k) => k + 1);
+    setPreviewUrl(imageUrl);
   };
 
   return (
@@ -229,19 +230,18 @@ export function Playground() {
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                 </div>
               )}
-              {packageName && (
+              {previewUrl ? (
                 <img
-                  key={imageKey}
-                  src={imageUrl || '/placeholder.svg'}
+                  key={previewUrl}
+                  src={previewUrl}
                   alt={`Dependents of ${packageName}`}
                   className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => setImageLoaded(true)}
                 />
-              )}
-              {!packageName && (
+              ) : (
                 <div className="flex h-full min-h-[160px] items-center justify-center text-sm text-muted-foreground">
-                  Enter a package name to see a preview
+                  Enter a package name and click &ldquo;Generate preview&rdquo;
                 </div>
               )}
             </div>
