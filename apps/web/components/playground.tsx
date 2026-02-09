@@ -12,6 +12,7 @@ type Theme = 'auto' | 'light' | 'dark';
 
 export function Playground() {
   const [packageName, setPackageName] = useState('dinero.js');
+  const [githubRepo, setGithubRepo] = useState('dinerojs/dinero.js');
   const [max, setMax] = useState(30);
   const [style, setStyle] = useState<Style>('mosaic');
   const [sort, setSort] = useState<Sort>('score');
@@ -44,7 +45,7 @@ export function Playground() {
   useEffect(() => {
     if (!activePackage) return;
     setImageLoaded(false);
-  }, [previewUrl, activePackage]);
+  }, [previewUrl]); // activePackage is already a dependency of previewUrl
 
   useEffect(() => {
     if (!activePackage) return;
@@ -53,15 +54,26 @@ export function Playground() {
     return () => clearTimeout(maxTimerRef.current);
   }, [max, activePackage]);
 
+  const trimmedRepo = githubRepo.trim();
+  const dependentsUrl = trimmedRepo
+    ? `https://github.com/${trimmedRepo}/network/dependents`
+    : '';
+
   const markdownEmbed = useMemo(() => {
     if (!packageName) return '';
-    return `[![Dependents](${imageUrl})](https://www.npmjs.com/package/${encodeURIComponent(packageName)}?activeTab=dependents)`;
-  }, [packageName, imageUrl]);
+    if (dependentsUrl) {
+      return `[![Dependents](${imageUrl})](${dependentsUrl})`;
+    }
+    return `![Dependents](${imageUrl})`;
+  }, [packageName, imageUrl, dependentsUrl]);
 
   const htmlEmbed = useMemo(() => {
     if (!packageName) return '';
-    return `<a href="https://www.npmjs.com/package/${encodeURIComponent(packageName)}?activeTab=dependents">\n  <img src="${imageUrl}" alt="Dependents" />\n</a>`;
-  }, [packageName, imageUrl]);
+    if (dependentsUrl) {
+      return `<a href="${dependentsUrl}">\n  <img src="${imageUrl}" alt="Dependents" />\n</a>`;
+    }
+    return `<img src="${imageUrl}" alt="Dependents" />`;
+  }, [packageName, imageUrl, dependentsUrl]);
 
   const handleLoadImage = () => {
     if (!packageName) return;
@@ -98,6 +110,22 @@ export function Playground() {
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
               placeholder="e.g. react, @scope/package"
+              className="font-mono text-sm"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="github-repo" className="text-sm text-foreground">
+              GitHub repo{' '}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
+            <Input
+              id="github-repo"
+              value={githubRepo}
+              onChange={(e) => setGithubRepo(e.target.value)}
+              placeholder="e.g. owner/repo"
               className="font-mono text-sm"
             />
           </div>
@@ -190,7 +218,7 @@ export function Playground() {
                 <img
                   key={previewUrl}
                   src={previewUrl}
-                  alt={`Dependents of ${packageName}`}
+                  alt={`Dependents of ${activePackage}`}
                   className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => setImageLoaded(true)}
