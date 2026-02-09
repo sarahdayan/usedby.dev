@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CacheEntry } from '../types';
 import type { GetDependentsOptions } from '../get-dependents';
+import { buildLockKey } from '../get-dependents';
 import type { ScoredRepo } from '../../github/types';
 
 vi.mock('../cache', () => ({
@@ -236,6 +237,66 @@ describe('getDependents', () => {
 
     await expect(getDependents(options)).rejects.toThrow('Pipeline failed');
   });
+
+  it('skips background refresh when lock is held', async () => {
+    const entry = createEntry();
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+
+    const kv = createMockKV();
+    const lockKey = buildLockKey('npm:react');
+    vi.mocked(kv.get).mockImplementation((key: string) =>
+      Promise.resolve(key === lockKey ? '1' : null)
+    );
+
+    const options = createOptions({ kv });
+    await getDependents(options);
+
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(refreshDependents).not.toHaveBeenCalled();
+  });
+
+  it('acquires and releases lock during background refresh', async () => {
+    const entry = createEntry();
+    const freshEntry = createEntry({ fetchedAt: NOW.toISOString() });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockResolvedValue(freshEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const kv = createMockKV();
+    const lockKey = buildLockKey('npm:react');
+
+    const options = createOptions({ kv });
+    await getDependents(options);
+
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+
+    expect(kv.put).toHaveBeenCalledWith(lockKey, '1', {
+      expirationTtl: 300,
+    });
+    expect(kv.delete).toHaveBeenCalledWith(lockKey);
+  });
+
+  it('releases lock even when background refresh fails', async () => {
+    const entry = createEntry();
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockRejectedValue(new Error('API error'));
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const kv = createMockKV();
+    const lockKey = buildLockKey('npm:react');
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const options = createOptions({ kv });
+    await getDependents(options);
+
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+
+    expect(kv.delete).toHaveBeenCalledWith(lockKey);
+    consoleSpy.mockRestore();
+  });
 });
 
 function createScoredRepo(name: string): ScoredRepo {
@@ -265,8 +326,9 @@ function createEntry(overrides: Partial<CacheEntry> = {}): CacheEntry {
 
 function createMockKV() {
   return {
-    get: vi.fn(),
-    put: vi.fn(),
+    get: vi.fn().mockResolvedValue(null),
+    put: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
   } as unknown as KVNamespace;
 }
 

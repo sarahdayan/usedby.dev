@@ -75,7 +75,7 @@ export async function getDependents(
       `stale (${ageH}h old), ${cached.entry.repos.length} repos, refreshing in background`
     );
     waitUntil(
-      backgroundRefresh(packageName, env, kv, key, cached.entry, now, limits)
+      tryBackgroundRefresh(packageName, env, kv, key, cached.entry, now, limits)
     );
 
     return {
@@ -98,7 +98,13 @@ export async function getDependents(
   };
 }
 
-async function backgroundRefresh(
+const LOCK_TTL_SECONDS = 300;
+
+export function buildLockKey(cacheKey: string): string {
+  return `lock:${cacheKey}`;
+}
+
+async function tryBackgroundRefresh(
   packageName: string,
   env: { GITHUB_TOKEN: string },
   kv: KVNamespace,
@@ -107,6 +113,15 @@ async function backgroundRefresh(
   now?: Date,
   limits: PipelineLimits = PROD_LIMITS
 ): Promise<void> {
+  const lockKey = buildLockKey(key);
+  const existing = await kv.get(lockKey);
+
+  if (existing !== null) {
+    return;
+  }
+
+  await kv.put(lockKey, '1', { expirationTtl: LOCK_TTL_SECONDS });
+
   try {
     const entry = await refreshDependents(
       packageName,
@@ -121,5 +136,7 @@ async function backgroundRefresh(
     // evicted while it's actively being served to users
     await touchLastAccessed(kv, key, staleEntry, now);
     console.error('Background refresh failed:', error);
+  } finally {
+    await kv.delete(lockKey);
   }
 }
