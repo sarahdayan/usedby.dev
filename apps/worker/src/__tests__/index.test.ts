@@ -698,7 +698,7 @@ describe('worker', () => {
 
     it('returns 404 for unknown platform', async () => {
       const response = await worker.fetch(
-        createRequest('/pypi/react'),
+        createRequest('/unknown/react'),
         createEnv(),
         createCtx()
       );

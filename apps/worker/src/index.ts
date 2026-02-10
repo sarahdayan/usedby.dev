@@ -2,6 +2,10 @@ import { getDependents } from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
 import { getStrategy, registerStrategy } from './ecosystems';
 import { npmStrategy } from './ecosystems/npm';
+import { phpStrategy } from './ecosystems/php';
+import { pythonStrategy } from './ecosystems/python';
+import { rubyStrategy } from './ecosystems/ruby';
+import { rustStrategy } from './ecosystems/rust';
 import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
@@ -16,6 +20,10 @@ interface Env {
 }
 
 registerStrategy(npmStrategy);
+registerStrategy(phpStrategy);
+registerStrategy(pythonStrategy);
+registerStrategy(rubyStrategy);
+registerStrategy(rustStrategy);
 
 export default {
   async scheduled(event, env, ctx) {
