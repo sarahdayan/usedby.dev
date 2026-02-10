@@ -4,6 +4,13 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ECOSYSTEMS, getEcosystem } from '@/lib/ecosystems';
 
@@ -126,7 +133,30 @@ export function Playground() {
         <div className="space-y-6 lg:col-span-2 rounded-xl border border-border bg-card p-6">
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Ecosystem</Label>
-            <div>
+            <div className="sm:hidden">
+              <Select
+                value={platform}
+                onValueChange={(id) => {
+                  setPlatform(id);
+                  const eco = getEcosystem(id);
+                  setPackageName(eco.example);
+                  setGithubRepo(eco.repo);
+                  setActivePackage('');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ECOSYSTEMS.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="hidden sm:block">
               <ToggleGroup
                 options={ECOSYSTEMS.map((e) => ({
                   label: e.label,
