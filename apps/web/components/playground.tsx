@@ -5,12 +5,14 @@ import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { ECOSYSTEMS, getEcosystem } from '@/lib/ecosystems';
 
 type Style = 'mosaic' | 'detailed';
 type Sort = 'score' | 'stars';
 type Theme = 'auto' | 'light' | 'dark';
 
 export function Playground() {
+  const [platform, setPlatform] = useState('npm');
   const [packageName, setPackageName] = useState('dinero.js');
   const [githubRepo, setGithubRepo] = useState('dinerojs/dinero.js');
   const [max, setMax] = useState(30);
@@ -26,7 +28,7 @@ export function Playground() {
     if (!pkg) {
       return '';
     }
-    const base = `https://api.usedby.dev/npm/${pkg}`;
+    const base = `https://api.usedby.dev/${platform}/${pkg}`;
     const params = new URLSearchParams();
     if (style !== 'mosaic') {
       params.set('style', style);
@@ -49,7 +51,7 @@ export function Playground() {
   const previewUrl = useMemo(
     () => buildUrl(activePackage, debouncedMax),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activePackage, style, sort, theme, debouncedMax]
+    [activePackage, platform, style, sort, theme, debouncedMax]
   );
 
   useEffect(() => {
@@ -114,13 +116,33 @@ export function Playground() {
           Try it with your package
         </h2>
         <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
-          Enter your npm package name, tweak the options, and preview the result
-          in real time.
+          Enter your package name, tweak the options, and preview the result in
+          real time.
         </p>
       </div>
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-1 rounded-xl border border-border bg-card p-6">
+      <div className="mt-12 grid gap-8 lg:grid-cols-5">
+        <div className="space-y-6 lg:col-span-2 rounded-xl border border-border bg-card p-6">
+          <div className="space-y-2">
+            <Label className="text-sm text-foreground">Ecosystem</Label>
+            <div>
+              <ToggleGroup
+                options={ECOSYSTEMS.map((e) => ({
+                  label: e.label,
+                  value: e.id,
+                }))}
+                value={platform}
+                onChange={(id) => {
+                  setPlatform(id);
+                  const eco = getEcosystem(id);
+                  setPackageName(eco.example);
+                  setGithubRepo(eco.repo);
+                  setActivePackage('');
+                }}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="package-name" className="text-sm text-foreground">
               Package name
@@ -129,7 +151,7 @@ export function Playground() {
               id="package-name"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
-              placeholder="e.g. react, @scope/package"
+              placeholder={getEcosystem(platform).placeholder}
               className="font-mono text-sm"
             />
           </div>
@@ -219,7 +241,7 @@ export function Playground() {
           </button>
         </div>
 
-        <div className="min-w-0 space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-3">
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border px-4 py-3">
               <span className="text-xs font-medium text-muted-foreground">
@@ -323,7 +345,7 @@ function ToggleGroup<T extends string>({
 const LOADING_MESSAGES = [
   'Searching GitHub for dependents\u2026',
   'This can take a while on a cold start\u2026',
-  'Checking package.json files\u2026',
+  'Checking manifest files\u2026',
   'Enriching repository metadata\u2026',
   'Politely asking GitHub for more data\u2026',
   'Filtering out forks and noise\u2026',
