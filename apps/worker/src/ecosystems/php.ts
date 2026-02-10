@@ -8,11 +8,11 @@ export const phpStrategy: EcosystemStrategy = {
   packageNamePattern:
     /^[a-z0-9]([a-z0-9_.-]*[a-z0-9])?\/[a-z0-9]([a-z0-9_.-]*[a-z0-9])?$/,
 
-  buildSearchQuery(packageName: string): string {
+  buildSearchQuery(packageName: string) {
     return `"${packageName}" filename:composer.json`;
   },
 
-  isDependency(manifestContent: string, packageName: string): boolean {
+  isDependency(manifestContent: string, packageName: string) {
     try {
       const parsed = JSON.parse(manifestContent) as Record<string, unknown>;
 
@@ -30,9 +30,7 @@ export const phpStrategy: EcosystemStrategy = {
     return false;
   },
 
-  async resolveGitHubRepo(
-    packageName: string
-  ): Promise<{ owner: string; repo: string } | null> {
+  async resolveGitHubRepo(packageName: string) {
     try {
       const [vendor, pkg] = packageName.split('/');
       const response = await fetch(

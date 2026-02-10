@@ -12,11 +12,11 @@ export const npmStrategy: EcosystemStrategy = {
   manifestFilename: 'package.json',
   packageNamePattern: /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/,
 
-  buildSearchQuery(packageName: string): string {
+  buildSearchQuery(packageName: string) {
     return `"${packageName}" filename:package.json`;
   },
 
-  isDependency(manifestContent: string, packageName: string): boolean {
+  isDependency(manifestContent: string, packageName: string) {
     try {
       const parsed = JSON.parse(manifestContent) as Record<string, unknown>;
 
@@ -34,9 +34,7 @@ export const npmStrategy: EcosystemStrategy = {
     return false;
   },
 
-  async resolveGitHubRepo(
-    packageName: string
-  ): Promise<{ owner: string; repo: string } | null> {
+  async resolveGitHubRepo(packageName: string) {
     try {
       const response = await fetch(`https://registry.npmjs.org/${packageName}`);
 

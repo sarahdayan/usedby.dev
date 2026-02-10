@@ -17,11 +17,11 @@ export const pythonStrategy: EcosystemStrategy = {
   manifestFilename: 'requirements.txt',
   packageNamePattern: /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$/,
 
-  buildSearchQuery(packageName: string): string {
+  buildSearchQuery(packageName: string) {
     return `"${packageName}" filename:requirements.txt`;
   },
 
-  isDependency(manifestContent: string, packageName: string): boolean {
+  isDependency(manifestContent: string, packageName: string) {
     const normalizedTarget = normalizeName(packageName);
     const lines = manifestContent.split('\n');
 
@@ -54,9 +54,7 @@ export const pythonStrategy: EcosystemStrategy = {
     return false;
   },
 
-  async resolveGitHubRepo(
-    packageName: string
-  ): Promise<{ owner: string; repo: string } | null> {
+  async resolveGitHubRepo(packageName: string) {
     try {
       const response = await fetch(`https://pypi.org/pypi/${packageName}/json`);
 

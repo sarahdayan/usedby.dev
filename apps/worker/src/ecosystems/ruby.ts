@@ -5,11 +5,11 @@ export const rubyStrategy: EcosystemStrategy = {
   manifestFilename: 'Gemfile',
   packageNamePattern: /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
 
-  buildSearchQuery(packageName: string): string {
+  buildSearchQuery(packageName: string) {
     return `"${packageName}" filename:Gemfile`;
   },
 
-  isDependency(manifestContent: string, packageName: string): boolean {
+  isDependency(manifestContent: string, packageName: string) {
     const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(
       `^\\s*gem\\s+(['"])${escaped}\\1(?:\\s*,|\\s*$)`,
@@ -19,9 +19,7 @@ export const rubyStrategy: EcosystemStrategy = {
     return pattern.test(manifestContent);
   },
 
-  async resolveGitHubRepo(
-    packageName: string
-  ): Promise<{ owner: string; repo: string } | null> {
+  async resolveGitHubRepo(packageName: string) {
     try {
       const response = await fetch(
         `https://rubygems.org/api/v1/gems/${packageName}.json`

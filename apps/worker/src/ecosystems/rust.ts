@@ -9,20 +9,18 @@ export const rustStrategy: EcosystemStrategy = {
   manifestFilename: 'Cargo.toml',
   packageNamePattern: /^[a-zA-Z][a-zA-Z0-9_-]*$/,
 
-  buildSearchQuery(packageName: string): string {
+  buildSearchQuery(packageName: string) {
     return `"${packageName}" filename:Cargo.toml`;
   },
 
-  isDependency(manifestContent: string, packageName: string): boolean {
+  isDependency(manifestContent: string, packageName: string) {
     const escaped = escapeRegex(packageName);
     const pattern = new RegExp(`^\\s*${escaped}\\s*[=.]`, 'm');
 
     return pattern.test(manifestContent);
   },
 
-  async resolveGitHubRepo(
-    packageName: string
-  ): Promise<{ owner: string; repo: string } | null> {
+  async resolveGitHubRepo(packageName: string) {
     try {
       const response = await fetch(
         `https://crates.io/api/v1/crates/${packageName}`,
