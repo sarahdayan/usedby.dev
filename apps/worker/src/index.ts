@@ -1,5 +1,7 @@
 import { getDependents } from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
+import { getStrategy, registerStrategy } from './ecosystems';
+import { npmStrategy } from './ecosystems/npm';
 import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
@@ -13,8 +15,7 @@ interface Env {
   DEV?: string;
 }
 
-const SUPPORTED_PLATFORMS = ['npm'] as const;
-const NPM_PACKAGE_NAME = /^(@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9._-]+$/;
+registerStrategy(npmStrategy);
 
 export default {
   async scheduled(event, env, ctx) {
@@ -47,13 +48,9 @@ export default {
 
     const segments = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
     const platform = segments[0];
+    const strategy = platform ? getStrategy(platform) : undefined;
 
-    if (
-      !platform ||
-      !SUPPORTED_PLATFORMS.includes(
-        platform as (typeof SUPPORTED_PLATFORMS)[number]
-      )
-    ) {
+    if (!strategy) {
       return new Response('Not found', {
         status: 404,
         headers: { 'content-type': 'text/plain' },
@@ -62,7 +59,7 @@ export default {
 
     const packageName = segments.slice(1).join('/');
 
-    if (!NPM_PACKAGE_NAME.test(packageName)) {
+    if (!strategy.packageNamePattern.test(packageName)) {
       return new Response('Not found', {
         status: 404,
         headers: { 'content-type': 'text/plain' },
@@ -162,7 +159,7 @@ export default {
 
     try {
       const { repos, dependentCount } = await getDependents({
-        platform: 'npm',
+        strategy,
         packageName,
         kv: env.DEPENDENTS_CACHE,
         env: { GITHUB_TOKEN: env.GITHUB_TOKEN },

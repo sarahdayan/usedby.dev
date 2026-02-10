@@ -10,6 +10,7 @@ import {
   vi,
 } from 'vitest';
 
+import { npmStrategy } from '../../ecosystems/npm';
 import { FREE_LIMITS, PROD_LIMITS } from '../pipeline-limits';
 import { sleep } from '../rate-limit';
 import { searchDependents } from '../search-dependents';
@@ -45,7 +46,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -59,7 +60,7 @@ describe('searchDependents', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
         archived: false,
-        packageJsonPath: 'package.json',
+        manifestPath: 'package.json',
       },
       {
         owner: 'corp',
@@ -70,7 +71,7 @@ describe('searchDependents', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/1',
         isFork: false,
         archived: false,
-        packageJsonPath: 'package.json',
+        manifestPath: 'package.json',
       },
     ]);
     expect(results.partial).toBe(false);
@@ -107,7 +108,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -143,7 +144,9 @@ describe('searchDependents', () => {
       })
     );
 
-    await searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' });
+    await searchDependents(npmStrategy, 'my-package', {
+      GITHUB_TOKEN: 'fake-token',
+    });
 
     expect(sleep).toHaveBeenCalledTimes(1);
     expect(sleep).toHaveBeenCalledWith(PROD_LIMITS.pageDelayMs);
@@ -163,7 +166,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -181,7 +184,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -200,7 +203,9 @@ describe('searchDependents', () => {
     );
 
     await expect(
-      searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' })
+      searchDependents(npmStrategy, 'my-package', {
+        GITHUB_TOKEN: 'fake-token',
+      })
     ).rejects.toThrow();
   });
 
@@ -221,7 +226,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -234,7 +239,7 @@ describe('searchDependents', () => {
       avatarUrl: 'https://avatars.githubusercontent.com/u/42',
       isFork: true,
       archived: false,
-      packageJsonPath: 'package.json',
+      manifestPath: 'package.json',
     });
   });
 
@@ -266,7 +271,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -300,7 +305,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -340,7 +345,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -362,7 +367,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -392,6 +397,7 @@ describe('searchDependents', () => {
     );
 
     const results = await searchDependents(
+      npmStrategy,
       'my-package',
       { GITHUB_TOKEN: 'fake-token' },
       undefined,
@@ -425,6 +431,7 @@ describe('searchDependents', () => {
     );
 
     await searchDependents(
+      npmStrategy,
       'my-package',
       { GITHUB_TOKEN: 'fake-token' },
       undefined,
@@ -450,7 +457,7 @@ describe('searchDependents', () => {
       })
     );
 
-    const results = await searchDependents('my-package', {
+    const results = await searchDependents(npmStrategy, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -469,7 +476,9 @@ describe('searchDependents', () => {
     );
 
     await expect(
-      searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' })
+      searchDependents(npmStrategy, 'my-package', {
+        GITHUB_TOKEN: 'fake-token',
+      })
     ).rejects.toThrow();
   });
 
@@ -484,7 +493,9 @@ describe('searchDependents', () => {
     );
 
     await expect(
-      searchDependents('my-package', { GITHUB_TOKEN: 'fake-token' })
+      searchDependents(npmStrategy, 'my-package', {
+        GITHUB_TOKEN: 'fake-token',
+      })
     ).rejects.toThrow();
   });
 });

@@ -1,15 +1,16 @@
 import type { CacheEntry } from '../cache/types';
 import type { DevLogger } from '../dev-logger';
+import type { EcosystemStrategy } from '../ecosystems/strategy';
 import { enrichRepos } from './enrich-repos';
 import { fetchDependentCount } from './fetch-dependent-count';
 import { filterDependents } from './filter-dependents';
 import type { PipelineLimits } from './pipeline-limits';
 import { PAID_LIMITS } from './pipeline-limits';
-import { resolveGitHubRepo } from './resolve-repo';
 import { scoreDependents } from './score-dependents';
 import { searchDependents } from './search-dependents';
 
 export async function refreshDependents(
+  strategy: EcosystemStrategy,
   packageName: string,
   env: { GITHUB_TOKEN: string },
   now: Date = new Date(),
@@ -24,8 +25,8 @@ export async function refreshDependents(
 
   logger?.timeStart('search');
   const [searchResult, dependentCount] = await Promise.all([
-    searchDependents(packageName, env, logger, limits),
-    resolveDependentCount(packageName, logger),
+    searchDependents(strategy, packageName, env, logger, limits),
+    resolveDependentCount(strategy, packageName, logger),
   ]);
   logger?.timeEnd('search');
 
@@ -52,6 +53,7 @@ export async function refreshDependents(
   // Enrich only the capped set (adds real star counts + archived status).
   logger?.timeStart('enrich');
   const enrichResult = await enrichRepos(
+    strategy,
     capped,
     packageName,
     env,
@@ -83,11 +85,12 @@ export async function refreshDependents(
 }
 
 async function resolveDependentCount(
+  strategy: EcosystemStrategy,
   packageName: string,
   logger?: DevLogger
 ): Promise<number | null> {
   logger?.log('dependent-count', `resolving ${packageName}`);
-  const ghRepo = await resolveGitHubRepo(packageName, logger);
+  const ghRepo = await strategy.resolveGitHubRepo(packageName);
 
   if (!ghRepo) {
     logger?.log('dependent-count', 'could not resolve GitHub repo');

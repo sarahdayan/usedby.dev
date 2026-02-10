@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CacheEntry } from '../types';
 import type { GetDependentsOptions } from '../get-dependents';
 import { buildLockKey } from '../get-dependents';
+import { npmStrategy } from '../../ecosystems/npm';
 import type { ScoredRepo } from '../../github/types';
 
 vi.mock('../cache', () => ({
@@ -92,6 +93,7 @@ describe('getDependents', () => {
     // Await the promise passed to waitUntil to verify background work
     await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(refreshDependents).toHaveBeenCalledWith(
+      npmStrategy,
       'react',
       options.env,
       NOW,
@@ -181,6 +183,7 @@ describe('getDependents', () => {
       dependentCount: undefined,
     });
     expect(refreshDependents).toHaveBeenCalledWith(
+      npmStrategy,
       'react',
       options.env,
       NOW,
@@ -309,7 +312,7 @@ function createScoredRepo(name: string): ScoredRepo {
     avatarUrl: 'https://example.com/avatar.png',
     isFork: false,
     archived: false,
-    packageJsonPath: 'package.json',
+    manifestPath: 'package.json',
     score: 95,
   };
 }
@@ -334,7 +337,7 @@ function createMockKV() {
 
 function createOptions(overrides: Partial<GetDependentsOptions> = {}) {
   return {
-    platform: 'npm',
+    strategy: npmStrategy,
     packageName: 'react',
     kv: createMockKV(),
     env: { GITHUB_TOKEN: 'fake-token' },

@@ -1,6 +1,8 @@
 import { FRESH_TTL_MS, writeCache } from '../cache/cache';
 import { parseCacheKey } from '../cache/parse-cache-key';
 import type { CacheMetadata } from '../cache/types';
+import { getStrategy } from '../ecosystems';
+import type { EcosystemStrategy } from '../ecosystems/strategy';
 import { refreshDependents } from '../github/pipeline';
 import { PROD_LIMITS } from '../github/pipeline-limits';
 import {
@@ -24,6 +26,7 @@ export interface ScheduledRefreshResult {
 interface StaleEntry {
   key: string;
   packageName: string;
+  strategy: EcosystemStrategy;
   fetchedAt: number;
   partial: boolean;
   lastAccessedAt: string;
@@ -72,13 +75,18 @@ export async function runScheduledRefresh(
         const parsed = parseCacheKey(key.name);
 
         if (parsed) {
-          staleEntries.push({
-            key: key.name,
-            packageName: parsed.packageName,
-            fetchedAt,
-            partial,
-            lastAccessedAt: lastAccessedAtIso,
-          });
+          const strategy = getStrategy(parsed.platform);
+
+          if (strategy) {
+            staleEntries.push({
+              key: key.name,
+              packageName: parsed.packageName,
+              strategy,
+              fetchedAt,
+              partial,
+              lastAccessedAt: lastAccessedAtIso,
+            });
+          }
         }
       }
     }
@@ -108,6 +116,7 @@ export async function runScheduledRefresh(
   for (const staleEntry of staleEntries.slice(0, MAX_REFRESHES_PER_RUN)) {
     try {
       const entry = await refreshDependents(
+        staleEntry.strategy,
         staleEntry.packageName,
         { GITHUB_TOKEN: env.GITHUB_TOKEN },
         now,

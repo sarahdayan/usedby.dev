@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { clearRegistry, registerStrategy } from '../../ecosystems/registry';
+import { npmStrategy } from '../../ecosystems/npm';
 import type { CacheEntry, CacheMetadata } from '../../cache/types';
 
 vi.mock('../../github/pipeline', () => ({
@@ -24,6 +26,11 @@ const ENV = {
   DEPENDENTS_CACHE: createMockKV(),
   GITHUB_TOKEN: 'fake-token',
 };
+
+beforeAll(() => {
+  clearRegistry();
+  registerStrategy(npmStrategy);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -92,8 +99,8 @@ describe('runScheduledRefresh', () => {
 
     expect(result.refreshed).toBe(2);
     // Oldest first
-    expect(vi.mocked(refreshDependents).mock.calls[0]![0]).toBe('react');
-    expect(vi.mocked(refreshDependents).mock.calls[1]![0]).toBe('vue');
+    expect(vi.mocked(refreshDependents).mock.calls[0]![1]).toBe('react');
+    expect(vi.mocked(refreshDependents).mock.calls[1]![1]).toBe('vue');
   });
 
   it('prioritizes partial entries over stale entries', async () => {
@@ -121,8 +128,8 @@ describe('runScheduledRefresh', () => {
 
     expect(result.refreshed).toBe(2);
     // Partial first
-    expect(vi.mocked(refreshDependents).mock.calls[0]![0]).toBe('vue');
-    expect(vi.mocked(refreshDependents).mock.calls[1]![0]).toBe('react');
+    expect(vi.mocked(refreshDependents).mock.calls[0]![1]).toBe('vue');
+    expect(vi.mocked(refreshDependents).mock.calls[1]![1]).toBe('react');
   });
 
   it('aborts remaining refreshes on rate limit error', async () => {

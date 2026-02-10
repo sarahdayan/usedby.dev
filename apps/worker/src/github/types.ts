@@ -7,7 +7,9 @@ export interface DependentRepo {
   avatarUrl: string;
   isFork: boolean;
   archived: boolean;
-  packageJsonPath: string;
+  manifestPath: string;
+  /** @deprecated Use `manifestPath`. Kept for KV backwards compatibility. */
+  packageJsonPath?: string;
 }
 
 export interface ScoredRepo extends DependentRepo {

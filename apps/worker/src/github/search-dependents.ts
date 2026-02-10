@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 
 import type { DevLogger } from '../dev-logger';
+import type { EcosystemStrategy } from '../ecosystems/strategy';
 import type { PipelineLimits } from './pipeline-limits';
 import { PROD_LIMITS } from './pipeline-limits';
 import {
@@ -17,6 +18,7 @@ const PER_PAGE = 100;
 const MAX_RETRIES = 3;
 
 export async function searchDependents(
+  strategy: EcosystemStrategy,
   packageName: string,
   env: { GITHUB_TOKEN: string },
   logger?: DevLogger,
@@ -33,7 +35,11 @@ export async function searchDependents(
     let response;
 
     try {
-      response = await fetchPageWithRetry(octokit, packageName, page);
+      response = await fetchPageWithRetry(
+        octokit,
+        strategy.buildSearchQuery(packageName),
+        page
+      );
     } catch (error) {
       if (isRateLimitError(error) || isSecondaryRateLimitError(error)) {
         console.log(
@@ -66,7 +72,7 @@ export async function searchDependents(
         avatarUrl: repo.owner.avatar_url,
         isFork: repo.fork,
         archived: false,
-        packageJsonPath: item.path,
+        manifestPath: item.path,
       });
     }
 
@@ -92,13 +98,13 @@ export async function searchDependents(
 
 async function fetchPageWithRetry(
   octokit: Octokit,
-  packageName: string,
+  query: string,
   page: number
 ) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await octokit.rest.search.code({
-        q: `"${packageName}" filename:package.json`,
+        q: query,
         per_page: PER_PAGE,
         page,
       });

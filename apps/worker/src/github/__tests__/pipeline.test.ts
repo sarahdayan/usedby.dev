@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { npmStrategy } from '../../ecosystems/npm';
 import type { DependentRepo, SearchResult } from '../types';
 
 vi.mock('../search-dependents', () => ({
@@ -10,10 +11,6 @@ vi.mock('../enrich-repos', () => ({
   enrichRepos: vi.fn(),
 }));
 
-vi.mock('../resolve-repo', () => ({
-  resolveGitHubRepo: vi.fn(),
-}));
-
 vi.mock('../fetch-dependent-count', () => ({
   fetchDependentCount: vi.fn(),
 }));
@@ -22,7 +19,6 @@ import { enrichRepos } from '../enrich-repos';
 import { fetchDependentCount } from '../fetch-dependent-count';
 import { refreshDependents } from '../pipeline';
 import { PROD_LIMITS } from '../pipeline-limits';
-import { resolveGitHubRepo } from '../resolve-repo';
 import { searchDependents } from '../search-dependents';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
@@ -33,7 +29,6 @@ afterEach(() => {
 });
 
 function stubDefaultMocks() {
-  vi.mocked(resolveGitHubRepo).mockResolvedValue(null);
   vi.mocked(fetchDependentCount).mockResolvedValue(null);
 }
 
@@ -56,16 +51,17 @@ describe('refreshDependents', () => {
     } satisfies SearchResult);
 
     // Enrichment reveals that 'archived' is actually archived
-    vi.mocked(enrichRepos).mockImplementation(async (repos) => ({
+    vi.mocked(enrichRepos).mockImplementation(async (_strategy, repos) => ({
       repos: repos.map((r) =>
         r.name === 'archived' ? { ...r, archived: true } : r
       ),
       rateLimited: false,
     }));
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(searchDependents).toHaveBeenCalledWith(
+      npmStrategy,
       'react',
       ENV,
       undefined,
@@ -73,7 +69,7 @@ describe('refreshDependents', () => {
     );
 
     // enrichRepos receives all non-fork repos (star filter deferred to post-enrichment)
-    const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![0];
+    const enrichedRepos = vi.mocked(enrichRepos).mock.calls[0]![1];
     expect(enrichedRepos.map((r) => r.name)).toEqual([
       'popular',
       'archived',
@@ -103,7 +99,7 @@ describe('refreshDependents', () => {
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result).toEqual({
       repos: [],
@@ -123,7 +119,7 @@ describe('refreshDependents', () => {
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result.partial).toBe(true);
   });
@@ -138,7 +134,7 @@ describe('refreshDependents', () => {
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: true });
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result.partial).toBe(true);
   });
@@ -147,9 +143,9 @@ describe('refreshDependents', () => {
     stubDefaultMocks();
     vi.mocked(searchDependents).mockRejectedValue(new Error('API error'));
 
-    await expect(refreshDependents('react', ENV, NOW)).rejects.toThrow(
-      'API error'
-    );
+    await expect(
+      refreshDependents(npmStrategy, 'react', ENV, NOW)
+    ).rejects.toThrow('API error');
   });
 
   it('includes dependentCount when resolution succeeds', async () => {
@@ -160,13 +156,13 @@ describe('refreshDependents', () => {
       capped: false,
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
-    vi.mocked(resolveGitHubRepo).mockResolvedValue({
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue({
       owner: 'facebook',
       repo: 'react',
     });
     vi.mocked(fetchDependentCount).mockResolvedValue(12345);
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result.dependentCount).toBe(12345);
   });
@@ -179,10 +175,10 @@ describe('refreshDependents', () => {
       capped: false,
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
-    vi.mocked(resolveGitHubRepo).mockResolvedValue(null);
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue(null);
     vi.mocked(fetchDependentCount).mockResolvedValue(null);
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result.dependentCount).toBeUndefined();
   });
@@ -195,13 +191,13 @@ describe('refreshDependents', () => {
       capped: false,
     });
     vi.mocked(enrichRepos).mockResolvedValue({ repos: [], rateLimited: false });
-    vi.mocked(resolveGitHubRepo).mockResolvedValue({
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue({
       owner: 'facebook',
       repo: 'react',
     });
     vi.mocked(fetchDependentCount).mockResolvedValue(null);
 
-    const result = await refreshDependents('react', ENV, NOW);
+    const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
     expect(result.dependentCount).toBeUndefined();
   });
@@ -218,7 +214,7 @@ function createRepo(
     avatarUrl: 'https://example.com/avatar.png',
     isFork: false,
     archived: false,
-    packageJsonPath: 'package.json',
+    manifestPath: 'package.json',
     ...overrides,
   };
 }

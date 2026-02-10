@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { npmStrategy } from '../../ecosystems/npm';
 import { enrichRepos } from '../enrich-repos';
 import type { DependentRepo } from '../types';
 
@@ -37,6 +38,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app'), createSkeletonRepo('corp/lib')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -53,7 +55,7 @@ describe('enrichRepos', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/99',
         isFork: false,
         archived: false,
-        packageJsonPath: 'package.json',
+        manifestPath: 'package.json',
       },
       {
         owner: 'corp',
@@ -64,7 +66,7 @@ describe('enrichRepos', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/42',
         isFork: true,
         archived: true,
-        packageJsonPath: 'package.json',
+        manifestPath: 'package.json',
       },
     ]);
   });
@@ -82,6 +84,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app'), createSkeletonRepo('deleted/repo')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -93,7 +96,7 @@ describe('enrichRepos', () => {
   });
 
   it('handles empty input', async () => {
-    const result = await enrichRepos([], 'my-package', {
+    const result = await enrichRepos(npmStrategy, [], 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -125,7 +128,7 @@ describe('enrichRepos', () => {
       createSkeletonRepo(`org/repo-${i}`)
     );
 
-    const result = await enrichRepos(repos, 'my-package', {
+    const result = await enrichRepos(npmStrategy, repos, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -161,7 +164,7 @@ describe('enrichRepos', () => {
       createSkeletonRepo(`org/repo-${i}`)
     );
 
-    const result = await enrichRepos(repos, 'my-package', {
+    const result = await enrichRepos(npmStrategy, repos, 'my-package', {
       GITHUB_TOKEN: 'fake-token',
     });
 
@@ -180,6 +183,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -200,6 +204,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -220,7 +225,7 @@ describe('enrichRepos', () => {
     );
 
     await expect(
-      enrichRepos([createSkeletonRepo('acme/app')], 'my-package', {
+      enrichRepos(npmStrategy, [createSkeletonRepo('acme/app')], 'my-package', {
         GITHUB_TOKEN: 'fake-token',
       })
     ).rejects.toThrow();
@@ -233,7 +238,7 @@ describe('enrichRepos', () => {
           data: {
             repo_0: createGraphQLRepo({
               stargazerCount: 500,
-              packageJson: {
+              manifest: {
                 text: JSON.stringify({
                   dependencies: { 'my-package': '^1.0.0' },
                 }),
@@ -241,7 +246,7 @@ describe('enrichRepos', () => {
             }),
             repo_1: createGraphQLRepo({
               stargazerCount: 300,
-              packageJson: {
+              manifest: {
                 text: JSON.stringify({
                   description: 'Mentions my-package in description only',
                 }),
@@ -253,6 +258,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app'), createSkeletonRepo('noise/repo')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -268,14 +274,14 @@ describe('enrichRepos', () => {
         return HttpResponse.json({
           data: {
             repo_0: createGraphQLRepo({
-              packageJson: {
+              manifest: {
                 text: JSON.stringify({
                   devDependencies: { 'my-package': '^2.0.0' },
                 }),
               },
             }),
             repo_1: createGraphQLRepo({
-              packageJson: {
+              manifest: {
                 text: JSON.stringify({
                   peerDependencies: { 'my-package': '>=1.0.0' },
                 }),
@@ -287,6 +293,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/dev'), createSkeletonRepo('acme/peer')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -295,18 +302,19 @@ describe('enrichRepos', () => {
     expect(result.repos).toHaveLength(2);
   });
 
-  it('filters out repos with null packageJson (file deleted)', async () => {
+  it('filters out repos with null manifest (file deleted)', async () => {
     server.use(
       http.post('https://api.github.com/graphql', () => {
         return HttpResponse.json({
           data: {
-            repo_0: createGraphQLRepo({ packageJson: null }),
+            repo_0: createGraphQLRepo({ manifest: null }),
           },
         });
       })
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -315,13 +323,13 @@ describe('enrichRepos', () => {
     expect(result.repos).toHaveLength(0);
   });
 
-  it('filters out repos with malformed JSON in packageJson', async () => {
+  it('filters out repos with malformed JSON in manifest', async () => {
     server.use(
       http.post('https://api.github.com/graphql', () => {
         return HttpResponse.json({
           data: {
             repo_0: createGraphQLRepo({
-              packageJson: { text: 'not valid json {{{' },
+              manifest: { text: 'not valid json {{{' },
             }),
           },
         });
@@ -329,6 +337,7 @@ describe('enrichRepos', () => {
     );
 
     const result = await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -337,7 +346,7 @@ describe('enrichRepos', () => {
     expect(result.repos).toHaveLength(0);
   });
 
-  it('uses packageJsonPath in GraphQL query expression', async () => {
+  it('uses manifestPath in GraphQL query expression', async () => {
     let capturedVariables: Record<string, string> = {};
 
     server.use(
@@ -357,6 +366,7 @@ describe('enrichRepos', () => {
     );
 
     await enrichRepos(
+      npmStrategy,
       [createSkeletonRepo('acme/app', 'packages/core/package.json')],
       'my-package',
       { GITHUB_TOKEN: 'fake-token' }
@@ -368,7 +378,7 @@ describe('enrichRepos', () => {
 
 function createSkeletonRepo(
   fullName: string,
-  packageJsonPath = 'package.json'
+  manifestPath = 'package.json'
 ): DependentRepo {
   const [owner = '', name = ''] = fullName.split('/');
 
@@ -381,7 +391,7 @@ function createSkeletonRepo(
     avatarUrl: 'https://avatars.githubusercontent.com/u/1',
     isFork: false,
     archived: false,
-    packageJsonPath,
+    manifestPath,
   };
 }
 
@@ -391,7 +401,7 @@ function createGraphQLRepo(overrides?: {
   avatarUrl?: string;
   isFork?: boolean;
   isArchived?: boolean;
-  packageJson?: { text: string } | null;
+  manifest?: { text: string } | null;
 }) {
   return {
     stargazerCount: overrides?.stargazerCount ?? 100,
@@ -402,9 +412,9 @@ function createGraphQLRepo(overrides?: {
       avatarUrl:
         overrides?.avatarUrl ?? 'https://avatars.githubusercontent.com/u/1',
     },
-    packageJson:
-      'packageJson' in (overrides ?? {})
-        ? overrides!.packageJson
+    manifest:
+      'manifest' in (overrides ?? {})
+        ? overrides!.manifest
         : {
             text: JSON.stringify({ dependencies: { 'my-package': '^1.0.0' } }),
           },

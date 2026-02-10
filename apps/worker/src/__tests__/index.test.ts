@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { npmStrategy } from '../ecosystems/npm';
 import type { ScoredRepo } from '../github/types';
 
 const mockCache = {
@@ -230,7 +231,7 @@ describe('worker', () => {
 
       expect(getDependents).toHaveBeenCalledWith(
         expect.objectContaining({
-          platform: 'npm',
+          strategy: npmStrategy,
           packageName: 'react',
           kv: env.DEPENDENTS_CACHE,
           env: { GITHUB_TOKEN: 'fake-token' },
@@ -255,7 +256,7 @@ describe('worker', () => {
 
       expect(getDependents).toHaveBeenCalledWith(
         expect.objectContaining({
-          platform: 'npm',
+          strategy: npmStrategy,
           packageName: '@babel/core',
           kv: env.DEPENDENTS_CACHE,
           env: { GITHUB_TOKEN: 'fake-token' },
@@ -897,7 +898,7 @@ function createScoredRepo(
     avatarUrl: 'https://example.com/avatar.png',
     isFork: false,
     archived: false,
-    packageJsonPath: 'package.json',
+    manifestPath: 'package.json',
     score: 95,
     ...overrides,
   };

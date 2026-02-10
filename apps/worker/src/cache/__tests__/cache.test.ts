@@ -140,7 +140,7 @@ function createEntry(overrides: Partial<CacheEntry> = {}): CacheEntry {
         avatarUrl: 'https://example.com/avatar.png',
         isFork: false,
         archived: false,
-        packageJsonPath: 'package.json',
+        manifestPath: 'package.json',
         score: 95,
       },
     ],

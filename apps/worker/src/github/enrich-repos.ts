@@ -1,11 +1,13 @@
 import { Octokit } from '@octokit/rest';
 
 import type { DevLogger } from '../dev-logger';
+import type { EcosystemStrategy } from '../ecosystems/strategy';
 import type { PipelineLimits } from './pipeline-limits';
 import { PAID_LIMITS } from './pipeline-limits';
 import type { DependentRepo, EnrichResult } from './types';
 
 export async function enrichRepos(
+  strategy: EcosystemStrategy,
   repos: DependentRepo[],
   packageName: string,
   env: { GITHUB_TOKEN: string },
@@ -38,7 +40,7 @@ export async function enrichRepos(
 
     const wave = batches.slice(i, i + concurrency);
     const results = await Promise.allSettled(
-      wave.map((batch) => enrichBatch(octokit, batch, packageName))
+      wave.map((batch) => enrichBatch(octokit, batch, packageName, strategy))
     );
 
     // Collect successes and classify failures before deciding action.
@@ -99,7 +101,8 @@ interface BatchResult {
 async function enrichBatch(
   octokit: Octokit,
   batch: DependentRepo[],
-  packageName: string
+  packageName: string,
+  strategy: EcosystemStrategy
 ): Promise<BatchResult> {
   const { query, variables } = buildGraphQLQuery(batch);
   const data = await octokit.graphql<Record<string, GraphQLRepoResult | null>>(
@@ -119,7 +122,7 @@ async function enrichBatch(
       continue;
     }
 
-    if (!isDependency(result.packageJson, packageName)) {
+    if (!strategy.isDependency(result.manifest?.text ?? '', packageName)) {
       falsePositives.push(batch[j]!.fullName);
       continue;
     }
@@ -144,7 +147,7 @@ interface GraphQLRepoResult {
   isFork: boolean;
   pushedAt: string | null;
   owner: { avatarUrl: string };
-  packageJson: { text: string } | null;
+  manifest: { text: string } | null;
 }
 
 function buildGraphQLQuery(repos: DependentRepo[]): {
@@ -162,7 +165,7 @@ function buildGraphQLQuery(repos: DependentRepo[]): {
   const fragments = repos.map((repo, i) => {
     variables[`owner_${i}`] = repo.owner;
     variables[`name_${i}`] = repo.name;
-    variables[`expr_${i}`] = `HEAD:${repo.packageJsonPath}`;
+    variables[`expr_${i}`] = `HEAD:${repo.manifestPath}`;
 
     return `repo_${i}: repository(owner: $owner_${i}, name: $name_${i}) {
       stargazerCount
@@ -170,7 +173,7 @@ function buildGraphQLQuery(repos: DependentRepo[]): {
       isFork
       pushedAt
       owner { avatarUrl }
-      packageJson: object(expression: $expr_${i}) { ... on Blob { text } }
+      manifest: object(expression: $expr_${i}) { ... on Blob { text } }
     }`;
   });
 
@@ -178,38 +181,6 @@ function buildGraphQLQuery(repos: DependentRepo[]): {
     query: `query(${varDeclarations}) { ${fragments.join('\n')} }`,
     variables,
   };
-}
-
-const DEP_KEYS = [
-  'dependencies',
-  'devDependencies',
-  'peerDependencies',
-  'optionalDependencies',
-] as const;
-
-function isDependency(
-  packageJson: { text: string } | null,
-  packageName: string
-): boolean {
-  if (packageJson?.text == null) {
-    return false;
-  }
-
-  try {
-    const parsed = JSON.parse(packageJson.text) as Record<string, unknown>;
-
-    for (const key of DEP_KEYS) {
-      const deps = parsed[key];
-
-      if (deps != null && typeof deps === 'object' && packageName in deps) {
-        return true;
-      }
-    }
-  } catch {
-    // Malformed JSON — treat as false positive
-  }
-
-  return false;
 }
 
 function isGraphQLRateLimited(error: unknown): boolean {

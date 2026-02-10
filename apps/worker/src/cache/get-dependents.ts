@@ -1,6 +1,7 @@
 import type { ScoredRepo } from '../github/types';
 import type { CacheEntry } from './types';
 import type { DevLogger } from '../dev-logger';
+import type { EcosystemStrategy } from '../ecosystems/strategy';
 import { refreshDependents } from '../github/pipeline';
 import type { PipelineLimits } from '../github/pipeline-limits';
 import { PROD_LIMITS } from '../github/pipeline-limits';
@@ -13,7 +14,7 @@ import {
 } from './cache';
 
 export interface GetDependentsOptions {
-  platform: string;
+  strategy: EcosystemStrategy;
   packageName: string;
   kv: KVNamespace;
   env: { GITHUB_TOKEN: string };
@@ -34,7 +35,7 @@ export async function getDependents(
   options: GetDependentsOptions
 ): Promise<GetDependentsResult> {
   const {
-    platform,
+    strategy,
     packageName,
     kv,
     env,
@@ -43,7 +44,7 @@ export async function getDependents(
     logger,
     limits = PROD_LIMITS,
   } = options;
-  const key = buildCacheKey(platform, packageName);
+  const key = buildCacheKey(strategy.platform, packageName);
   const cached = await readCache(kv, key, now);
 
   if (cached.status === 'hit') {
@@ -75,7 +76,16 @@ export async function getDependents(
       `stale (${ageH}h old), ${cached.entry.repos.length} repos, refreshing in background`
     );
     waitUntil(
-      tryBackgroundRefresh(packageName, env, kv, key, cached.entry, now, limits)
+      tryBackgroundRefresh(
+        strategy,
+        packageName,
+        env,
+        kv,
+        key,
+        cached.entry,
+        now,
+        limits
+      )
     );
 
     return {
@@ -87,7 +97,14 @@ export async function getDependents(
   }
 
   logger?.log('cache', 'miss');
-  const entry = await refreshDependents(packageName, env, now, logger, limits);
+  const entry = await refreshDependents(
+    strategy,
+    packageName,
+    env,
+    now,
+    logger,
+    limits
+  );
   await writeCache(kv, key, entry);
 
   return {
@@ -105,6 +122,7 @@ export function buildLockKey(cacheKey: string): string {
 }
 
 async function tryBackgroundRefresh(
+  strategy: EcosystemStrategy,
   packageName: string,
   env: { GITHUB_TOKEN: string },
   kv: KVNamespace,
@@ -124,6 +142,7 @@ async function tryBackgroundRefresh(
 
   try {
     const entry = await refreshDependents(
+      strategy,
       packageName,
       env,
       now,

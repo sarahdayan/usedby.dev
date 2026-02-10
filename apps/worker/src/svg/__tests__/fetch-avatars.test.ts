@@ -154,7 +154,7 @@ function createScoredRepo(
     avatarUrl: `https://avatars.githubusercontent.com/u/${overrides.name}`,
     isFork: false,
     archived: false,
-    packageJsonPath: 'package.json',
+    manifestPath: 'package.json',
     score: 100,
     ...overrides,
   };
