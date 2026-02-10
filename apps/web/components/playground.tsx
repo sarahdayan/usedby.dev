@@ -71,7 +71,8 @@ export function Playground() {
   }, [max, activePackage]);
 
   const trimmedRepo = githubRepo.trim();
-  const dependentsUrl = trimmedRepo
+  const isValidRepo = /^[^/]+\/[^/]+$/.test(trimmedRepo);
+  const dependentsUrl = isValidRepo
     ? `https://github.com/${trimmedRepo}/network/dependents`
     : '';
 
@@ -166,8 +167,12 @@ export function Playground() {
             <Input
               id="github-repo"
               value={githubRepo}
-              onChange={(e) => setGithubRepo(e.target.value)}
-              placeholder="e.g. owner/repo"
+              onChange={(e) =>
+                setGithubRepo(
+                  e.target.value.replace(/^https?:\/\/github\.com\//, '')
+                )
+              }
+              placeholder="e.g. owner/repo or GitHub URL"
               className="font-mono text-sm"
             />
           </div>
