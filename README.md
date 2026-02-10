@@ -1,24 +1,34 @@
 # usedby.dev
 
-**Showcase who depends on your npm package with a single image embed.**
+**Showcase who depends on your library with a single image embed.**
 
-usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any npm package — perfect for your README, docs, or landing page.
+usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any package — perfect for your README, docs, or landing page. Supports npm, RubyGems, PyPI, Cargo, and Composer.
 
 ![usedby.dev demo for dinero.js](https://api.usedby.dev/npm/dinero.js?max=30)
 
+## Supported ecosystems
+
+| Ecosystem | URL prefix   | Example                                             |
+| --------- | ------------ | --------------------------------------------------- |
+| npm       | `/npm/`      | `https://api.usedby.dev/npm/react`                  |
+| RubyGems  | `/rubygems/` | `https://api.usedby.dev/rubygems/rails`             |
+| PyPI      | `/pypi/`     | `https://api.usedby.dev/pypi/requests`              |
+| Cargo     | `/cargo/`    | `https://api.usedby.dev/cargo/serde`                |
+| Composer  | `/composer/` | `https://api.usedby.dev/composer/laravel/framework` |
+
 ## Quick start
 
-Add this to your README or docs, replacing `your-package` with your npm package name:
+Add this to your README or docs, replacing `{ecosystem}` and `your-package` with the appropriate values:
 
 ```md
-[![Used by](https://api.usedby.dev/npm/your-package)](https://github.com/your-org/your-repo/network/dependents)
+[![Used by](https://api.usedby.dev/{ecosystem}/your-package)](https://github.com/your-org/your-repo/network/dependents)
 
 Generated with [usedby.dev](https://usedby.dev/)
 ```
 
 That's it. No API key, no sign-up, no config.
 
-For scoped packages:
+For npm scoped packages:
 
 ```md
 [![Used by](https://api.usedby.dev/npm/@your-scope/your-package)](https://github.com/your-org/your-repo/network/dependents)
@@ -77,9 +87,13 @@ usedby.dev relies on [GitHub's code search API](https://docs.github.com/en/rest/
 
 Results are cached for 24 hours. After that, the next request serves stale data while triggering a background refresh. Entries not accessed for 30 days are evicted.
 
-### Does this work with scoped packages?
+### Does this work with scoped npm packages?
 
 Yes. Scoped packages like `@scope/package` are fully supported, just use them in the URL as-is (e.g., `https://api.usedby.dev/npm/@scope/package`).
+
+### Which ecosystems are supported?
+
+npm, RubyGems, PyPI, Cargo, and Composer. Use the corresponding prefix in the URL (e.g., `/pypi/requests`, `/cargo/serde`).
 
 ## Self-hosting
 
