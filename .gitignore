@@ -31,6 +31,9 @@ out/
 build
 dist
 
+# Next.js auto-generated
+next-env.d.ts
+
 
 # Debug
 npm-debug.log*
