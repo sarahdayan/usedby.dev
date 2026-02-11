@@ -47,7 +47,7 @@ export async function getDependents(
   const key = buildCacheKey(strategy.platform, packageName);
   const cached = await readCache(kv, key, now);
 
-  if (cached.status === 'hit') {
+  if (cached.status === 'hit' && !cached.entry.countOnly) {
     const ageMs =
       (now ?? new Date()).getTime() -
       new Date(cached.entry.fetchedAt).getTime();
@@ -66,7 +66,7 @@ export async function getDependents(
     };
   }
 
-  if (cached.status === 'stale') {
+  if (cached.status === 'stale' && !cached.entry.countOnly) {
     const ageMs =
       (now ?? new Date()).getTime() -
       new Date(cached.entry.fetchedAt).getTime();
@@ -96,7 +96,10 @@ export async function getDependents(
     };
   }
 
-  logger?.log('cache', 'miss');
+  logger?.log(
+    'cache',
+    cached.entry?.countOnly ? 'count-only entry, upgrading' : 'miss'
+  );
   const entry = await refreshDependents(
     strategy,
     packageName,

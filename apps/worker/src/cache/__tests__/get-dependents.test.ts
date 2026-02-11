@@ -229,6 +229,73 @@ describe('getDependents', () => {
     expect(result.dependentCount).toBe(999);
   });
 
+  it('treats count-only hit as miss and runs full pipeline', async () => {
+    const countOnlyEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+      dependentCount: 500,
+    });
+    const fullEntry = createEntry({ fetchedAt: NOW.toISOString() });
+
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({
+      status: 'hit',
+      entry: countOnlyEntry,
+    });
+    vi.mocked(refreshDependents).mockResolvedValue(fullEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    const result = await getDependents(options);
+
+    expect(refreshDependents).toHaveBeenCalledWith(
+      npmStrategy,
+      'react',
+      options.env,
+      NOW,
+      undefined,
+      PROD_LIMITS
+    );
+    expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', fullEntry);
+    expect(result.fromCache).toBe(false);
+    expect(result.refreshing).toBe(false);
+  });
+
+  it('treats count-only stale as miss and runs full pipeline', async () => {
+    const countOnlyEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+      dependentCount: 500,
+    });
+    const fullEntry = createEntry({ fetchedAt: NOW.toISOString() });
+
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({
+      status: 'stale',
+      entry: countOnlyEntry,
+    });
+    vi.mocked(refreshDependents).mockResolvedValue(fullEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    const result = await getDependents(options);
+
+    expect(refreshDependents).toHaveBeenCalledWith(
+      npmStrategy,
+      'react',
+      options.env,
+      NOW,
+      undefined,
+      PROD_LIMITS
+    );
+    expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', fullEntry);
+    expect(result.fromCache).toBe(false);
+    expect(result.refreshing).toBe(false);
+    expect(options.waitUntil).not.toHaveBeenCalled();
+  });
+
   it('propagates pipeline errors on miss', async () => {
     vi.mocked(buildCacheKey).mockReturnValue('npm:react');
     vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
