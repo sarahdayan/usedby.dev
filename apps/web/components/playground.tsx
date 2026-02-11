@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { HighlightedCode } from '@/components/highlighted-code';
 import { ECOSYSTEMS, getEcosystem, stripRegistryUrl } from '@/lib/ecosystems';
 
 type Style = 'mosaic' | 'detailed';
@@ -326,7 +327,9 @@ export function Playground() {
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
-                    <code>{markdownEmbed}</code>
+                    <HighlightedCode language="markdown">
+                      {markdownEmbed}
+                    </HighlightedCode>
                   </pre>
                 </div>
               </div>
@@ -340,7 +343,9 @@ export function Playground() {
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
-                    <code>{htmlEmbed}</code>
+                    <HighlightedCode language="html">
+                      {htmlEmbed}
+                    </HighlightedCode>
                   </pre>
                 </div>
               </div>

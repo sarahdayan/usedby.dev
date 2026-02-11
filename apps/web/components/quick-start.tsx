@@ -2,6 +2,7 @@
 
 import { type ReactNode, useMemo, useState } from 'react';
 import { CheckIcon, CopyIcon } from 'lucide-react';
+import { HighlightedCode } from '@/components/highlighted-code';
 import { ECOSYSTEMS } from '@/lib/ecosystems';
 
 function CopyButton({ text }: { text: string }) {
@@ -131,7 +132,9 @@ export function QuickStart() {
             </div>
             <div className="overflow-x-auto p-4">
               <pre className="font-mono text-sm leading-loose text-foreground">
-                <code>{markdownSnippet}</code>
+                <HighlightedCode language="markdown">
+                  {markdownSnippet}
+                </HighlightedCode>
               </pre>
             </div>
           </div>
@@ -145,7 +148,7 @@ export function QuickStart() {
             </div>
             <div className="overflow-x-auto p-4">
               <pre className="font-mono text-sm leading-loose text-foreground">
-                <code>{htmlSnippet}</code>
+                <HighlightedCode language="html">{htmlSnippet}</HighlightedCode>
               </pre>
             </div>
           </div>
