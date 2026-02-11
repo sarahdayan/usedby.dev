@@ -6,6 +6,7 @@ import type { CacheEntry, CacheMetadata } from '../../cache/types';
 
 vi.mock('../../github/pipeline', () => ({
   refreshDependents: vi.fn(),
+  refreshCountOnly: vi.fn(),
 }));
 
 vi.mock('../../cache/cache', async (importOriginal) => {
@@ -18,7 +19,7 @@ vi.mock('../../cache/cache', async (importOriginal) => {
 });
 
 import { writeCache } from '../../cache/cache';
-import { refreshDependents } from '../../github/pipeline';
+import { refreshCountOnly, refreshDependents } from '../../github/pipeline';
 import { EVICTION_TTL_MS, runScheduledRefresh } from '../run-scheduled-refresh';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
@@ -404,6 +405,49 @@ describe('runScheduledRefresh', () => {
     await runScheduledRefresh(ENV, NOW);
 
     expect(callOrder).toEqual(['delete', 'refresh']);
+  });
+
+  it('dispatches to refreshCountOnly for count-only entries', async () => {
+    const countOnlyMeta: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 13 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: true,
+      countOnly: true,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: countOnlyMeta }],
+    });
+
+    vi.mocked(refreshCountOnly).mockResolvedValue(
+      createEntry({ countOnly: true, partial: true })
+    );
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(refreshCountOnly).toHaveBeenCalledWith(npmStrategy, 'react', NOW);
+    expect(refreshDependents).not.toHaveBeenCalled();
+    expect(result.refreshed).toBe(1);
+  });
+
+  it('dispatches to refreshDependents for full entries', async () => {
+    const fullMeta: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: false,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: fullMeta }],
+    });
+
+    vi.mocked(refreshDependents).mockResolvedValue(createEntry());
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(refreshDependents).toHaveBeenCalled();
+    expect(refreshCountOnly).not.toHaveBeenCalled();
+    expect(result.refreshed).toBe(1);
   });
 
   it('preserves existing lastAccessedAt on scheduled refresh', async () => {

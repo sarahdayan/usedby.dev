@@ -66,6 +66,33 @@ Generated with [usedby.dev](https://usedby.dev/)
 Generated with [usedby.dev](https://usedby.dev/)
 ```
 
+## Badge
+
+usedby.dev also provides a Shields.io-compatible badge endpoint that displays a "used by N projects" count.
+
+```
+GET /:registry/:package/shield.json
+```
+
+**Markdown:**
+
+```md
+![Used By](https://img.shields.io/endpoint?url=https://api.usedby.dev/npm/PACKAGE/shield.json)
+```
+
+**HTML:**
+
+```html
+<img
+  src="https://img.shields.io/endpoint?url=https://api.usedby.dev/npm/PACKAGE/shield.json"
+  alt="Used By"
+/>
+```
+
+Replace `npm` and `PACKAGE` with the appropriate ecosystem and package name.
+
+See the [worker README](apps/worker/README.md) for full technical details on the endpoint.
+
 ## How it works
 
 1. **Search:** Queries the GitHub code search API for repositories that import your package

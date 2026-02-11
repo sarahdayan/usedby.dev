@@ -1,4 +1,7 @@
-import { getDependents } from './cache/get-dependents';
+import {
+  getDependentCountForBadge,
+  getDependents,
+} from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
 import { getStrategy, registerStrategy } from './ecosystems';
 import { npmStrategy } from './ecosystems/npm';
@@ -10,6 +13,11 @@ import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
+import {
+  buildShieldError,
+  buildShieldSuccess,
+  buildShieldUnavailable,
+} from './shield/build-shield-response';
 import { renderMessage } from './svg/render-message';
 import { renderMosaic } from './svg/render-mosaic';
 import type { Theme } from './svg/theme';
@@ -67,7 +75,10 @@ export default {
       });
     }
 
-    const packageName = segments.slice(1).join('/');
+    const isShield = segments[segments.length - 1] === 'shield.json';
+    const packageName = isShield
+      ? segments.slice(1, -1).join('/')
+      : segments.slice(1).join('/');
 
     if (!strategy.packageNamePattern.test(packageName)) {
       return new Response('Not found', {
@@ -75,6 +86,11 @@ export default {
         headers: { 'content-type': 'text/plain' },
       });
     }
+
+    if (isShield) {
+      return handleBadge(request, env, ctx, url, strategy, packageName);
+    }
+
     const maxParam = url.searchParams.get('max');
     let max: number | undefined;
 
@@ -219,6 +235,69 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+async function handleBadge(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  url: URL,
+  strategy: ReturnType<typeof getStrategy> & {},
+  packageName: string
+): Promise<Response> {
+  const isDev = env.DEV === 'true';
+  const logger = new DevLogger(isDev);
+  const limits = getLimits(isDev);
+
+  const cache = caches.default;
+  const canonicalUrl = new URL(
+    `${url.origin}/${strategy.platform}/${packageName}/shield.json`
+  );
+  const cacheKey = new Request(canonicalUrl.toString(), request);
+
+  if (!isDev) {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  try {
+    const { count } = await getDependentCountForBadge({
+      strategy,
+      packageName,
+      kv: env.DEPENDENTS_CACHE,
+      env: { GITHUB_TOKEN: env.GITHUB_TOKEN },
+      waitUntil: ctx.waitUntil.bind(ctx),
+      logger,
+      limits,
+    });
+
+    const body =
+      count != null ? buildShieldSuccess(count) : buildShieldUnavailable();
+
+    const response = new Response(JSON.stringify(body), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+      },
+    });
+
+    if (!isDev) {
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Badge error:', error);
+
+    return new Response(JSON.stringify(buildShieldError()), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+}
 
 function parseMax(value: string): number | null {
   const num = Number(value);

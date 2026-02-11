@@ -4,6 +4,7 @@ export interface CacheMetadata {
   fetchedAt: string;
   lastAccessedAt: string;
   partial: boolean;
+  countOnly?: boolean;
 }
 
 export interface CacheEntry extends CacheMetadata {

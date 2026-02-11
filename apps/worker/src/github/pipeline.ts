@@ -84,6 +84,29 @@ export async function refreshDependents(
   };
 }
 
+export async function refreshCountOnly(
+  strategy: EcosystemStrategy,
+  packageName: string,
+  now: Date = new Date(),
+  logger?: DevLogger
+): Promise<CacheEntry> {
+  const dependentCount = await resolveDependentCount(
+    strategy,
+    packageName,
+    logger
+  );
+  const isoNow = now.toISOString();
+
+  return {
+    repos: [],
+    fetchedAt: isoNow,
+    lastAccessedAt: isoNow,
+    partial: true,
+    countOnly: true,
+    ...(dependentCount != null && { dependentCount }),
+  };
+}
+
 async function resolveDependentCount(
   strategy: EcosystemStrategy,
   packageName: string,

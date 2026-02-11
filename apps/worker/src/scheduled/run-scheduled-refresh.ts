@@ -3,7 +3,7 @@ import { parseCacheKey } from '../cache/parse-cache-key';
 import type { CacheMetadata } from '../cache/types';
 import { getStrategy } from '../ecosystems';
 import type { EcosystemStrategy } from '../ecosystems/strategy';
-import { refreshDependents } from '../github/pipeline';
+import { refreshCountOnly, refreshDependents } from '../github/pipeline';
 import { PROD_LIMITS } from '../github/pipeline-limits';
 import {
   isRateLimitError,
@@ -30,6 +30,7 @@ interface StaleEntry {
   fetchedAt: number;
   partial: boolean;
   lastAccessedAt: string;
+  countOnly: boolean;
 }
 
 export async function runScheduledRefresh(
@@ -85,6 +86,7 @@ export async function runScheduledRefresh(
               fetchedAt,
               partial,
               lastAccessedAt: lastAccessedAtIso,
+              countOnly: key.metadata.countOnly === true,
             });
           }
         }
@@ -115,14 +117,20 @@ export async function runScheduledRefresh(
 
   for (const staleEntry of staleEntries.slice(0, MAX_REFRESHES_PER_RUN)) {
     try {
-      const entry = await refreshDependents(
-        staleEntry.strategy,
-        staleEntry.packageName,
-        { GITHUB_TOKEN: env.GITHUB_TOKEN },
-        now,
-        undefined,
-        PROD_LIMITS
-      );
+      const entry = staleEntry.countOnly
+        ? await refreshCountOnly(
+            staleEntry.strategy,
+            staleEntry.packageName,
+            now
+          )
+        : await refreshDependents(
+            staleEntry.strategy,
+            staleEntry.packageName,
+            { GITHUB_TOKEN: env.GITHUB_TOKEN },
+            now,
+            undefined,
+            PROD_LIMITS
+          );
       // Preserve the original lastAccessedAt so cron refreshes don't reset
       // the eviction clock — only real user requests should extend it
       entry.lastAccessedAt = staleEntry.lastAccessedAt;

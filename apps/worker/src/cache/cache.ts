@@ -32,6 +32,7 @@ function buildMetadata(entry: CacheEntry): CacheMetadata {
     fetchedAt: entry.fetchedAt,
     lastAccessedAt: entry.lastAccessedAt,
     partial: entry.partial,
+    ...(entry.countOnly && { countOnly: true }),
   };
 }
 

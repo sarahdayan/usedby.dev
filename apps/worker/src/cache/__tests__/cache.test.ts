@@ -88,6 +88,37 @@ describe('writeCache', () => {
       },
     });
   });
+
+  it('includes countOnly in metadata when entry is count-only', async () => {
+    const kv = createMockKV();
+    const entry = createEntry({ countOnly: true, repos: [] });
+
+    await writeCache(kv, 'npm:react', entry);
+
+    expect(kv.put).toHaveBeenCalledWith('npm:react', JSON.stringify(entry), {
+      metadata: {
+        fetchedAt: entry.fetchedAt,
+        lastAccessedAt: entry.lastAccessedAt,
+        partial: entry.partial,
+        countOnly: true,
+      },
+    });
+  });
+
+  it('omits countOnly from metadata when entry is not count-only', async () => {
+    const kv = createMockKV();
+    const entry = createEntry();
+
+    await writeCache(kv, 'npm:react', entry);
+
+    expect(kv.put).toHaveBeenCalledWith('npm:react', JSON.stringify(entry), {
+      metadata: {
+        fetchedAt: entry.fetchedAt,
+        lastAccessedAt: entry.lastAccessedAt,
+        partial: entry.partial,
+      },
+    });
+  });
 });
 
 describe('touchLastAccessed', () => {

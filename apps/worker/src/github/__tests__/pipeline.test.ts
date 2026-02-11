@@ -17,7 +17,7 @@ vi.mock('../fetch-dependent-count', () => ({
 
 import { enrichRepos } from '../enrich-repos';
 import { fetchDependentCount } from '../fetch-dependent-count';
-import { refreshDependents } from '../pipeline';
+import { refreshCountOnly, refreshDependents } from '../pipeline';
 import { PROD_LIMITS } from '../pipeline-limits';
 import { searchDependents } from '../search-dependents';
 
@@ -199,6 +199,50 @@ describe('refreshDependents', () => {
 
     const result = await refreshDependents(npmStrategy, 'react', ENV, NOW);
 
+    expect(result.dependentCount).toBeUndefined();
+  });
+});
+
+describe('refreshCountOnly', () => {
+  it('returns a count-only CacheEntry with dependentCount', async () => {
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue({
+      owner: 'facebook',
+      repo: 'react',
+    });
+    vi.mocked(fetchDependentCount).mockResolvedValue(12345);
+
+    const result = await refreshCountOnly(npmStrategy, 'react', NOW);
+
+    expect(result).toEqual({
+      repos: [],
+      fetchedAt: NOW.toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: true,
+      countOnly: true,
+      dependentCount: 12345,
+    });
+  });
+
+  it('omits dependentCount when repo resolution fails', async () => {
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue(null);
+
+    const result = await refreshCountOnly(npmStrategy, 'react', NOW);
+
+    expect(result.countOnly).toBe(true);
+    expect(result.repos).toEqual([]);
+    expect(result.dependentCount).toBeUndefined();
+  });
+
+  it('omits dependentCount when count fetch returns null', async () => {
+    vi.spyOn(npmStrategy, 'resolveGitHubRepo').mockResolvedValue({
+      owner: 'facebook',
+      repo: 'react',
+    });
+    vi.mocked(fetchDependentCount).mockResolvedValue(null);
+
+    const result = await refreshCountOnly(npmStrategy, 'react', NOW);
+
+    expect(result.countOnly).toBe(true);
     expect(result.dependentCount).toBeUndefined();
   });
 });
