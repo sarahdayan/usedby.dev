@@ -35,7 +35,7 @@ flowchart TD
 7. **Fetch avatars** — Downloads avatar images for the top results.
 8. **Render** — Produces an SVG (mosaic or detailed) with a "Used by N repositories" pill badge when the dependent count is available, and writes it to KV cache.
 
-## Endpoint
+## Image endpoint
 
 ```
 GET /:platform/:package
@@ -51,6 +51,66 @@ Example: `GET /npm/dinero.js` returns an SVG image.
 | `style`   | string  | `mosaic` | Rendering style. `mosaic` shows an avatar-only grid (10 columns, 70px avatars). `detailed` shows a 3-column card layout with avatar, repo name, and star count. |
 | `sort`    | string  | `score`  | Sort order. `score` ranks by `stars × recency_multiplier` (composite score). `stars` ranks by raw star count.                                                   |
 | `theme`   | string  | `auto`   | Color theme. `auto` adapts to the user's system preference via `prefers-color-scheme`. `light` and `dark` force a specific mode.                                |
+
+## Badge endpoint
+
+```
+GET /:platform/:package/shield.json
+```
+
+Returns a [Shields.io endpoint badge](https://shields.io/badges/endpoint-badge) JSON response with the number of dependents for a package.
+
+### Usage with Shields.io
+
+```
+https://img.shields.io/endpoint?url=https://api.usedby.dev/{platform}/{package}/shield.json
+```
+
+Example for `dinero.js` on npm:
+
+```markdown
+![Used by](https://img.shields.io/endpoint?url=https://api.usedby.dev/npm/dinero.js/shield.json)
+```
+
+### Supported registries
+
+| Platform   | Example                                   |
+| ---------- | ----------------------------------------- |
+| `npm`      | `/npm/dinero.js/shield.json`              |
+| `rubygems` | `/rubygems/rails/shield.json`             |
+| `pypi`     | `/pypi/django/shield.json`                |
+| `cargo`    | `/cargo/serde/shield.json`                |
+| `composer` | `/composer/laravel/framework/shield.json` |
+| `go`       | `/go/gorilla/mux/shield.json`             |
+
+### Response format
+
+```json
+{
+  "schemaVersion": 1,
+  "label": "used by",
+  "message": "1.2K+ projects",
+  "color": "brightgreen"
+}
+```
+
+| Field           | Type    | Description                                                                                          |
+| --------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | integer | Always `1` (Shields.io schema version).                                                              |
+| `label`         | string  | Always `"used by"`.                                                                                  |
+| `message`       | string  | Formatted count (e.g. `"42 projects"`, `"1.2K+ projects"`). `"unavailable"` or `"error"` on failure. |
+| `color`         | string  | `"brightgreen"` when count > 0, `"lightgrey"` when 0 or unavailable, `"red"` on error.               |
+| `isError`       | boolean | Present and `true` only on error responses.                                                          |
+
+Counts are formatted for readability: exact below 1,000, then abbreviated (`1.2K+`, `42K+`, `1.5M+`).
+
+### Caching
+
+Same stale-while-revalidate strategy as the image endpoint: 24-hour `Cache-Control` (`max-age=86400`), serve stale while refreshing in the background, 30-day KV eviction.
+
+### Count-only entries
+
+The badge endpoint is lightweight. On a cache miss, it creates a **count-only** KV entry (dependent count without full repo data), which avoids the expensive search + enrichment pipeline. A subsequent image request for the same package upgrades the entry to a full entry with repo details.
 
 ## Development
 
