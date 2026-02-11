@@ -11,6 +11,7 @@ vi.stubGlobal('caches', { default: mockCache });
 
 vi.mock('../cache/get-dependents', () => ({
   getDependents: vi.fn(),
+  getDependentCountForBadge: vi.fn(),
 }));
 
 vi.mock('../svg/fetch-avatars', () => ({
@@ -33,7 +34,10 @@ vi.mock('../scheduled/run-scheduled-refresh', () => ({
   runScheduledRefresh: vi.fn(),
 }));
 
-import { getDependents } from '../cache/get-dependents';
+import {
+  getDependentCountForBadge,
+  getDependents,
+} from '../cache/get-dependents';
 import { PROD_LIMITS } from '../github/pipeline-limits';
 import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
@@ -745,6 +749,154 @@ describe('worker', () => {
 
       expect(response.status).toBe(404);
       expect(getDependents).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /:platform/:package/shield.json', () => {
+    it('returns Shields.io JSON with count', async () => {
+      vi.mocked(getDependentCountForBadge).mockResolvedValue({
+        count: 42,
+        fromCache: false,
+      });
+
+      const response = await worker.fetch(
+        createRequest('/npm/react/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+      expect(response.headers.get('Cache-Control')).toBe(
+        'public, max-age=86400, s-maxage=86400'
+      );
+
+      const body = await response.json();
+      expect(body).toEqual({
+        schemaVersion: 1,
+        label: 'used by',
+        message: '42 projects',
+        color: 'brightgreen',
+      });
+    });
+
+    it('returns unavailable when count is null', async () => {
+      vi.mocked(getDependentCountForBadge).mockResolvedValue({
+        count: null,
+        fromCache: false,
+      });
+
+      const response = await worker.fetch(
+        createRequest('/npm/react/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      const body = await response.json();
+      expect(body).toEqual({
+        schemaVersion: 1,
+        label: 'used by',
+        message: 'unavailable',
+        color: 'lightgrey',
+      });
+    });
+
+    it('returns error JSON on pipeline failure', async () => {
+      vi.mocked(getDependentCountForBadge).mockRejectedValue(
+        new Error('API error')
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      try {
+        const response = await worker.fetch(
+          createRequest('/npm/react/shield.json'),
+          createEnv(),
+          createCtx()
+        );
+
+        expect(response.headers.get('Content-Type')).toBe('application/json');
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+
+        const body = await response.json();
+        expect(body).toEqual({
+          schemaVersion: 1,
+          label: 'used by',
+          message: 'error',
+          color: 'red',
+          isError: true,
+        });
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it('routes scoped npm packages correctly', async () => {
+      vi.mocked(getDependentCountForBadge).mockResolvedValue({
+        count: 10,
+        fromCache: false,
+      });
+
+      const response = await worker.fetch(
+        createRequest('/npm/@algolia/autocomplete-core/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(getDependentCountForBadge).toHaveBeenCalledWith(
+        expect.objectContaining({
+          strategy: npmStrategy,
+          packageName: '@algolia/autocomplete-core',
+        })
+      );
+    });
+
+    it('routes multi-segment Go packages correctly', async () => {
+      vi.mocked(getDependentCountForBadge).mockResolvedValue({
+        count: 200,
+        fromCache: false,
+      });
+
+      const response = await worker.fetch(
+        createRequest('/go/gorilla/mux/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(getDependentCountForBadge).toHaveBeenCalledWith(
+        expect.objectContaining({
+          packageName: 'gorilla/mux',
+        })
+      );
+    });
+
+    it('does not call getDependents for badge requests', async () => {
+      vi.mocked(getDependentCountForBadge).mockResolvedValue({
+        count: 5,
+        fromCache: false,
+      });
+
+      await worker.fetch(
+        createRequest('/npm/react/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(getDependents).not.toHaveBeenCalled();
+      expect(fetchAvatars).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 for unknown platform with shield.json', async () => {
+      const response = await worker.fetch(
+        createRequest('/unknown/react/shield.json'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 

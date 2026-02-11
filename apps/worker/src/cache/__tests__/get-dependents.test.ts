@@ -15,6 +15,7 @@ vi.mock('../cache', () => ({
 
 vi.mock('../../github/pipeline', () => ({
   refreshDependents: vi.fn(),
+  refreshCountOnly: vi.fn(),
 }));
 
 import {
@@ -23,8 +24,8 @@ import {
   touchLastAccessed,
   writeCache,
 } from '../cache';
-import { getDependents } from '../get-dependents';
-import { refreshDependents } from '../../github/pipeline';
+import { getDependentCountForBadge, getDependents } from '../get-dependents';
+import { refreshCountOnly, refreshDependents } from '../../github/pipeline';
 import { PROD_LIMITS } from '../../github/pipeline-limits';
 
 const NOW = new Date('2025-01-15T12:00:00Z');
@@ -366,6 +367,161 @@ describe('getDependents', () => {
 
     expect(kv.delete).toHaveBeenCalledWith(lockKey);
     consoleSpy.mockRestore();
+  });
+});
+
+describe('getDependentCountForBadge', () => {
+  it('returns count from dependentCount on hit', async () => {
+    const entry = createEntry({ dependentCount: 5000 });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'hit', entry });
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const result = await getDependentCountForBadge(createOptions());
+
+    expect(result).toEqual({ count: 5000, fromCache: true });
+  });
+
+  it('falls back to repos.length on hit when dependentCount is missing', async () => {
+    const entry = createEntry();
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'hit', entry });
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const result = await getDependentCountForBadge(createOptions());
+
+    expect(result).toEqual({ count: 1, fromCache: true });
+  });
+
+  it('returns null count for count-only hit without dependentCount', async () => {
+    const entry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+    });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'hit', entry });
+    vi.mocked(touchLastAccessed).mockResolvedValue();
+
+    const result = await getDependentCountForBadge(createOptions());
+
+    expect(result).toEqual({ count: null, fromCache: true });
+  });
+
+  it('returns count on stale and triggers background refresh', async () => {
+    const entry = createEntry({ dependentCount: 3000 });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'stale', entry });
+    vi.mocked(refreshDependents).mockResolvedValue(createEntry());
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    const result = await getDependentCountForBadge(options);
+
+    expect(result).toEqual({ count: 3000, fromCache: true });
+    expect(options.waitUntil).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs refreshCountOnly synchronously on miss', async () => {
+    const countOnlyEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+      dependentCount: 500,
+    });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(refreshCountOnly).mockResolvedValue(countOnlyEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    const result = await getDependentCountForBadge(options);
+
+    expect(result).toEqual({ count: 500, fromCache: false });
+    expect(refreshCountOnly).toHaveBeenCalledWith(
+      npmStrategy,
+      'react',
+      NOW,
+      undefined
+    );
+    expect(refreshDependents).not.toHaveBeenCalled();
+    expect(writeCache).toHaveBeenCalledWith(
+      options.kv,
+      'npm:react',
+      countOnlyEntry
+    );
+  });
+
+  it('returns null count on miss when resolveGitHubRepo fails', async () => {
+    const countOnlyEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+    });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(refreshCountOnly).mockResolvedValue(countOnlyEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const result = await getDependentCountForBadge(createOptions());
+
+    expect(result).toEqual({ count: null, fromCache: false });
+  });
+});
+
+describe('tryBackgroundRefresh with count-only entries', () => {
+  it('dispatches to refreshCountOnly for count-only stale entries', async () => {
+    const staleEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+      dependentCount: 100,
+    });
+    const refreshedEntry = createEntry({
+      repos: [],
+      countOnly: true,
+      partial: true,
+      dependentCount: 150,
+    });
+
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({
+      status: 'stale',
+      entry: staleEntry,
+    });
+    vi.mocked(refreshCountOnly).mockResolvedValue(refreshedEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    await getDependentCountForBadge(options);
+
+    // Await background refresh
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+
+    expect(refreshCountOnly).toHaveBeenCalled();
+    expect(refreshDependents).not.toHaveBeenCalled();
+    expect(writeCache).toHaveBeenCalled();
+  });
+
+  it('dispatches to refreshDependents for full stale entries', async () => {
+    const staleEntry = createEntry({ dependentCount: 100 });
+    const refreshedEntry = createEntry({ dependentCount: 150 });
+
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({
+      status: 'stale',
+      entry: staleEntry,
+    });
+    vi.mocked(refreshDependents).mockResolvedValue(refreshedEntry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    await getDependentCountForBadge(options);
+
+    await (options.waitUntil as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+
+    expect(refreshDependents).toHaveBeenCalled();
+    expect(refreshCountOnly).not.toHaveBeenCalled();
   });
 });
 

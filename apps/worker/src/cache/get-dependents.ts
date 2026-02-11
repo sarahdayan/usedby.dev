@@ -2,7 +2,7 @@ import type { ScoredRepo } from '../github/types';
 import type { CacheEntry } from './types';
 import type { DevLogger } from '../dev-logger';
 import type { EcosystemStrategy } from '../ecosystems/strategy';
-import { refreshDependents } from '../github/pipeline';
+import { refreshCountOnly, refreshDependents } from '../github/pipeline';
 import type { PipelineLimits } from '../github/pipeline-limits';
 import { PROD_LIMITS } from '../github/pipeline-limits';
 import {
@@ -118,6 +118,69 @@ export async function getDependents(
   };
 }
 
+export interface GetBadgeCountResult {
+  count: number | null;
+  fromCache: boolean;
+}
+
+function extractCount(entry: CacheEntry): number | null {
+  if (entry.dependentCount != null) {
+    return entry.dependentCount;
+  }
+
+  if (!entry.countOnly) {
+    return entry.repos.length;
+  }
+
+  return null;
+}
+
+export async function getDependentCountForBadge(
+  options: GetDependentsOptions
+): Promise<GetBadgeCountResult> {
+  const {
+    strategy,
+    packageName,
+    kv,
+    env,
+    waitUntil,
+    now,
+    logger,
+    limits = PROD_LIMITS,
+  } = options;
+  const key = buildCacheKey(strategy.platform, packageName);
+  const cached = await readCache(kv, key, now);
+
+  if (cached.status === 'hit') {
+    waitUntil(touchLastAccessed(kv, key, cached.entry, now));
+
+    return { count: extractCount(cached.entry), fromCache: true };
+  }
+
+  if (cached.status === 'stale') {
+    waitUntil(
+      tryBackgroundRefresh(
+        strategy,
+        packageName,
+        env,
+        kv,
+        key,
+        cached.entry,
+        now,
+        limits
+      )
+    );
+
+    return { count: extractCount(cached.entry), fromCache: true };
+  }
+
+  logger?.log('cache', 'miss (badge)');
+  const entry = await refreshCountOnly(strategy, packageName, now, logger);
+  await writeCache(kv, key, entry);
+
+  return { count: entry.dependentCount ?? null, fromCache: false };
+}
+
 const LOCK_TTL_SECONDS = 300;
 
 export function buildLockKey(cacheKey: string): string {
@@ -144,14 +207,16 @@ async function tryBackgroundRefresh(
   await kv.put(lockKey, '1', { expirationTtl: LOCK_TTL_SECONDS });
 
   try {
-    const entry = await refreshDependents(
-      strategy,
-      packageName,
-      env,
-      now,
-      undefined,
-      limits
-    );
+    const entry = staleEntry.countOnly
+      ? await refreshCountOnly(strategy, packageName, now)
+      : await refreshDependents(
+          strategy,
+          packageName,
+          env,
+          now,
+          undefined,
+          limits
+        );
     await writeCache(kv, key, entry);
   } catch (error) {
     // Refresh failed — still bump lastAccessedAt so the entry isn't
