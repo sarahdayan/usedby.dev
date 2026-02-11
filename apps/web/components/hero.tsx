@@ -48,9 +48,9 @@ export function Hero() {
             <span className="text-accent">depends on your library</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground lg:text-xl">
-            A single embeddable image that showcases your top dependents. No API
-            key, no sign-up, no config.
+          <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground lg:text-xl">
+            Drop-in embeds that showcase your top dependents. No API key, no
+            sign-up, no config.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">

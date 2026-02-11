@@ -79,20 +79,38 @@ const HINTS: Record<string, ReactNode> = {
   ),
 };
 
+type EmbedType = 'image' | 'badge';
+
 export function QuickStart() {
   const [platform, setPlatform] = useState('npm');
+  const [embedType, setEmbedType] = useState<EmbedType>('image');
 
-  const markdownSnippet = useMemo(
+  const imageMarkdown = useMemo(
     () =>
       `[![Used by](https://api.usedby.dev/${platform}/your-package)](https://github.com/your-org/your-repo/network/dependents)\nGenerated with [usedby.dev](https://usedby.dev/)`,
     [platform]
   );
 
-  const htmlSnippet = useMemo(
+  const imageHtml = useMemo(
     () =>
       `<a href="https://github.com/your-org/your-repo/network/dependents">\n  <img src="https://api.usedby.dev/${platform}/your-package" alt="Used by" />\n</a>\nGenerated with <a href="https://usedby.dev/">usedby.dev</a>`,
     [platform]
   );
+
+  const badgeMarkdown = useMemo(
+    () =>
+      `![Used by](https://img.shields.io/endpoint?url=https://api.usedby.dev/${platform}/your-package/shield.json)`,
+    [platform]
+  );
+
+  const badgeHtml = useMemo(
+    () =>
+      `<img src="https://img.shields.io/endpoint?url=https://api.usedby.dev/${platform}/your-package/shield.json" alt="Used by" />`,
+    [platform]
+  );
+
+  const activeMarkdown = embedType === 'image' ? imageMarkdown : badgeMarkdown;
+  const activeHtml = embedType === 'image' ? imageHtml : badgeHtml;
 
   return (
     <section
@@ -112,7 +130,7 @@ export function QuickStart() {
         </p>
 
         <div className="mt-12 w-full max-w-3xl space-y-6">
-          <div className="flex justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <ToggleGroup
               options={ECOSYSTEMS.map((e) => ({
                 label: e.label,
@@ -121,6 +139,14 @@ export function QuickStart() {
               value={platform}
               onChange={setPlatform}
             />
+            <ToggleGroup
+              options={[
+                { label: 'Image', value: 'image' as EmbedType },
+                { label: 'Badge', value: 'badge' as EmbedType },
+              ]}
+              value={embedType}
+              onChange={setEmbedType}
+            />
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -128,12 +154,12 @@ export function QuickStart() {
               <span className="text-xs font-medium text-muted-foreground">
                 Markdown
               </span>
-              <CopyButton text={markdownSnippet} />
+              <CopyButton text={activeMarkdown} />
             </div>
             <div className="overflow-x-auto p-4">
               <pre className="font-mono text-sm leading-loose text-foreground">
                 <HighlightedCode language="markdown">
-                  {markdownSnippet}
+                  {activeMarkdown}
                 </HighlightedCode>
               </pre>
             </div>
@@ -144,11 +170,11 @@ export function QuickStart() {
               <span className="text-xs font-medium text-muted-foreground">
                 HTML
               </span>
-              <CopyButton text={htmlSnippet} />
+              <CopyButton text={activeHtml} />
             </div>
             <div className="overflow-x-auto p-4">
               <pre className="font-mono text-sm leading-loose text-foreground">
-                <HighlightedCode language="html">{htmlSnippet}</HighlightedCode>
+                <HighlightedCode language="html">{activeHtml}</HighlightedCode>
               </pre>
             </div>
           </div>

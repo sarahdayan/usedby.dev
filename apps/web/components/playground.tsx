@@ -15,11 +15,13 @@ import { Slider } from '@/components/ui/slider';
 import { HighlightedCode } from '@/components/highlighted-code';
 import { ECOSYSTEMS, getEcosystem, stripRegistryUrl } from '@/lib/ecosystems';
 
+type EmbedType = 'image' | 'badge';
 type Style = 'mosaic' | 'detailed';
 type Sort = 'score' | 'stars';
 type Theme = 'auto' | 'light' | 'dark';
 
 export function Playground() {
+  const [embedType, setEmbedType] = useState<EmbedType>('image');
   const [platform, setPlatform] = useState('npm');
   const [packageName, setPackageName] = useState('dinero.js');
   const [githubRepo, setGithubRepo] = useState('dinerojs/dinero.js');
@@ -106,10 +108,49 @@ export function Playground() {
     return `${img}\nGenerated with <a href="https://usedby.dev/">usedby.dev</a>`;
   }, [packageName, imageUrl, dependentsUrl]);
 
+  function buildBadgeUrl(pkg: string) {
+    if (!pkg) {
+      return '';
+    }
+    return `https://img.shields.io/endpoint?url=https://api.usedby.dev/${platform}/${pkg}/shield.json`;
+  }
+
+  const badgeUrl = buildBadgeUrl(packageName);
+
+  const badgePreviewUrl = useMemo(() => {
+    if (!activePackage) {
+      return '';
+    }
+    return `https://img.shields.io/endpoint?url=https://api.usedby.dev/${platform}/${activePackage}/shield.json`;
+  }, [activePackage, platform]);
+
+  const badgeMarkdownEmbed = useMemo(() => {
+    if (!packageName) {
+      return '';
+    }
+    return dependentsUrl
+      ? `[![Used by](${badgeUrl})](${dependentsUrl})`
+      : `![Used by](${badgeUrl})`;
+  }, [packageName, badgeUrl, dependentsUrl]);
+
+  const badgeHtmlEmbed = useMemo(() => {
+    if (!packageName) {
+      return '';
+    }
+    return dependentsUrl
+      ? `<a href="${dependentsUrl}">\n  <img src="${badgeUrl}" alt="Used by" />\n</a>`
+      : `<img src="${badgeUrl}" alt="Used by" />`;
+  }, [packageName, badgeUrl, dependentsUrl]);
+
+  const activeMarkdownEmbed =
+    embedType === 'image' ? markdownEmbed : badgeMarkdownEmbed;
+  const activeHtmlEmbed = embedType === 'image' ? htmlEmbed : badgeHtmlEmbed;
+
   const handleLoadImage = () => {
     if (!packageName) {
       return;
     }
+    setImageLoaded(false);
     setDebouncedMax(max);
     setActivePackage(packageName);
   };
@@ -134,6 +175,23 @@ export function Playground() {
 
       <div className="mt-12 grid gap-8 lg:grid-cols-6 xl:grid-cols-5">
         <div className="space-y-6 lg:col-span-3 xl:col-span-2 rounded-xl border border-border bg-card p-6">
+          <div className="space-y-2">
+            <Label className="text-sm text-foreground">Embed type</Label>
+            <div>
+              <ToggleGroup
+                options={[
+                  { label: 'Image', value: 'image' as EmbedType },
+                  { label: 'Badge', value: 'badge' as EmbedType },
+                ]}
+                value={embedType}
+                onChange={(type) => {
+                  setEmbedType(type);
+                  setActivePackage('');
+                }}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Ecosystem</Label>
             <div className="sm:hidden">
@@ -214,64 +272,70 @@ export function Playground() {
             />
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm text-foreground">Max dependents</Label>
-              <span className="font-mono text-sm text-muted-foreground">
-                {max}
-              </span>
-            </div>
-            <Slider
-              value={[max]}
-              onValueChange={(v) => v[0] !== undefined && setMax(v[0])}
-              min={1}
-              max={100}
-              step={1}
-            />
-          </div>
+          {embedType === 'image' && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-foreground">
+                    Max dependents
+                  </Label>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {max}
+                  </span>
+                </div>
+                <Slider
+                  value={[max]}
+                  onValueChange={(v) => v[0] !== undefined && setMax(v[0])}
+                  min={1}
+                  max={100}
+                  step={1}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm text-foreground">Style</Label>
-            <div>
-              <ToggleGroup
-                options={[
-                  { label: 'Mosaic', value: 'mosaic' },
-                  { label: 'Detailed', value: 'detailed' },
-                ]}
-                value={style}
-                onChange={setStyle}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Style</Label>
+                <div>
+                  <ToggleGroup
+                    options={[
+                      { label: 'Mosaic', value: 'mosaic' },
+                      { label: 'Detailed', value: 'detailed' },
+                    ]}
+                    value={style}
+                    onChange={setStyle}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm text-foreground">Sort</Label>
-            <div>
-              <ToggleGroup
-                options={[
-                  { label: 'Score', value: 'score' },
-                  { label: 'Stars', value: 'stars' },
-                ]}
-                value={sort}
-                onChange={setSort}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Sort</Label>
+                <div>
+                  <ToggleGroup
+                    options={[
+                      { label: 'Score', value: 'score' },
+                      { label: 'Stars', value: 'stars' },
+                    ]}
+                    value={sort}
+                    onChange={setSort}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm text-foreground">Theme</Label>
-            <div>
-              <ToggleGroup
-                options={[
-                  { label: 'Auto', value: 'auto' },
-                  { label: 'Light', value: 'light' },
-                  { label: 'Dark', value: 'dark' },
-                ]}
-                value={theme}
-                onChange={setTheme}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Theme</Label>
+                <div>
+                  <ToggleGroup
+                    options={[
+                      { label: 'Auto', value: 'auto' },
+                      { label: 'Light', value: 'light' },
+                      { label: 'Dark', value: 'dark' },
+                    ]}
+                    value={theme}
+                    onChange={setTheme}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <button
             type="button"
@@ -291,23 +355,50 @@ export function Playground() {
               </span>
             </div>
             <div
-              className={`relative min-h-[200px] p-4 ${theme === 'light' ? 'bg-foreground' : ''}`}
+              className={`relative min-h-[200px] p-4 ${embedType === 'image' && theme === 'light' ? 'bg-foreground' : ''}`}
             >
-              {!imageLoaded && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                  <LoadingMessage />
+              {embedType === 'image' ? (
+                <>
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                      <LoadingMessage />
+                    </div>
+                  )}
+                  {activePackage ? (
+                    <img
+                      key={previewUrl}
+                      src={previewUrl}
+                      alt={`Dependents of ${activePackage}`}
+                      className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                      onLoad={() => setImageLoaded(true)}
+                      onError={() => setImageLoaded(true)}
+                    />
+                  ) : (
+                    <div className="flex h-full min-h-[160px] items-center justify-center text-sm text-muted-foreground">
+                      <span>
+                        Enter a package name and click{' '}
+                        <strong>Generate preview</strong>
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : activePackage ? (
+                <div className="flex min-h-[160px] items-center justify-center">
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                    </div>
+                  )}
+                  <img
+                    key={badgePreviewUrl}
+                    src={badgePreviewUrl}
+                    alt={`Used by badge for ${activePackage}`}
+                    className={`transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => setImageLoaded(true)}
+                  />
                 </div>
-              )}
-              {activePackage ? (
-                <img
-                  key={previewUrl}
-                  src={previewUrl}
-                  alt={`Dependents of ${activePackage}`}
-                  className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => setImageLoaded(true)}
-                />
               ) : (
                 <div className="flex h-full min-h-[160px] items-center justify-center text-sm text-muted-foreground">
                   <span>
@@ -326,12 +417,12 @@ export function Playground() {
                   <span className="text-xs font-medium text-muted-foreground">
                     Markdown
                   </span>
-                  <CopyButton text={markdownEmbed} label="Markdown" />
+                  <CopyButton text={activeMarkdownEmbed} label="Markdown" />
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
                     <HighlightedCode language="markdown">
-                      {markdownEmbed}
+                      {activeMarkdownEmbed}
                     </HighlightedCode>
                   </pre>
                 </div>
@@ -342,12 +433,12 @@ export function Playground() {
                   <span className="text-xs font-medium text-muted-foreground">
                     HTML
                   </span>
-                  <CopyButton text={htmlEmbed} label="HTML" />
+                  <CopyButton text={activeHtmlEmbed} label="HTML" />
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
                     <HighlightedCode language="html">
-                      {htmlEmbed}
+                      {activeHtmlEmbed}
                     </HighlightedCode>
                   </pre>
                 </div>
