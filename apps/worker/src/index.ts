@@ -6,6 +6,7 @@ import { phpStrategy } from './ecosystems/php';
 import { pythonStrategy } from './ecosystems/python';
 import { rubyStrategy } from './ecosystems/ruby';
 import { rustStrategy } from './ecosystems/rust';
+import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
@@ -24,6 +25,7 @@ registerStrategy(phpStrategy);
 registerStrategy(pythonStrategy);
 registerStrategy(rubyStrategy);
 registerStrategy(rustStrategy);
+registerStrategy(goStrategy);
 
 export default {
   async scheduled(event, env, ctx) {

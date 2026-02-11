@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ECOSYSTEMS, getEcosystem } from '@/lib/ecosystems';
+import { ECOSYSTEMS, getEcosystem, stripRegistryUrl } from '@/lib/ecosystems';
 
 type Style = 'mosaic' | 'detailed';
 type Sort = 'score' | 'stars';
@@ -30,6 +30,8 @@ export function Playground() {
   const [activePackage, setActivePackage] = useState('');
   const [debouncedMax, setDebouncedMax] = useState(max);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const isValidPackage =
+    getEcosystem(platform).packageNamePattern.test(packageName);
 
   function buildUrl(pkg: string, maxValue: number) {
     if (!pkg) {
@@ -129,8 +131,8 @@ export function Playground() {
         </p>
       </div>
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-2 rounded-xl border border-border bg-card p-6">
+      <div className="mt-12 grid gap-8 lg:grid-cols-6 xl:grid-cols-5">
+        <div className="space-y-6 lg:col-span-3 xl:col-span-2 rounded-xl border border-border bg-card p-6">
           <div className="space-y-2">
             <Label className="text-sm text-foreground">Ecosystem</Label>
             <div className="sm:hidden">
@@ -181,7 +183,11 @@ export function Playground() {
             <Input
               id="package-name"
               value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
+              onChange={(e) =>
+                setPackageName(
+                  stripRegistryUrl(getEcosystem(platform), e.target.value)
+                )
+              }
               placeholder={getEcosystem(platform).placeholder}
               className="font-mono text-sm"
             />
@@ -269,14 +275,14 @@ export function Playground() {
           <button
             type="button"
             onClick={handleLoadImage}
-            disabled={!packageName}
+            disabled={!isValidPackage}
             className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             Generate preview
           </button>
         </div>
 
-        <div className="min-w-0 space-y-6 lg:col-span-3">
+        <div className="min-w-0 space-y-6 lg:col-span-3 xl:col-span-3">
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border px-4 py-3">
               <span className="text-xs font-medium text-muted-foreground">

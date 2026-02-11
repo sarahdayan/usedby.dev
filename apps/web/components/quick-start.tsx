@@ -69,6 +69,13 @@ const HINTS: Record<string, ReactNode> = {
       package name (e.g. <code className={code}>vendor/package</code>).
     </>
   ),
+  go: (
+    <>
+      Replace <code className={code}>your-package</code> with your Go module
+      path in <code className={code}>owner/repo</code> format (e.g.{' '}
+      <code className={code}>gin-gonic/gin</code>).
+    </>
+  ),
 };
 
 export function QuickStart() {

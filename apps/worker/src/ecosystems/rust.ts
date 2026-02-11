@@ -1,9 +1,5 @@
 import type { EcosystemStrategy } from './strategy';
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 export const rustStrategy: EcosystemStrategy = {
   platform: 'cargo',
   manifestFilename: 'Cargo.toml',
@@ -57,3 +53,7 @@ export const rustStrategy: EcosystemStrategy = {
     }
   },
 };
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

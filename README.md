@@ -2,7 +2,7 @@
 
 **Showcase who depends on your library with a single image embed.**
 
-usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any package — perfect for your README, docs, or landing page. Supports npm, RubyGems, PyPI, Cargo, and Composer.
+usedby.dev generates beautiful, zero-config SVG images showing the top dependents of any package — perfect for your README, docs, or landing page. Supports npm, RubyGems, PyPI, Cargo, Composer, and Go.
 
 ![usedby.dev demo for dinero.js](https://api.usedby.dev/npm/dinero.js?max=30)
 
@@ -15,6 +15,7 @@ usedby.dev generates beautiful, zero-config SVG images showing the top dependent
 | PyPI      | `/pypi/`     | `https://api.usedby.dev/pypi/requests`              |
 | Cargo     | `/cargo/`    | `https://api.usedby.dev/cargo/serde`                |
 | Composer  | `/composer/` | `https://api.usedby.dev/composer/laravel/framework` |
+| Go        | `/go/`       | `https://api.usedby.dev/go/gin-gonic/gin`           |
 
 ## Quick start
 
@@ -93,7 +94,7 @@ Yes. Scoped packages like `@scope/package` are fully supported, just use them in
 
 ### Which ecosystems are supported?
 
-npm, RubyGems, PyPI, Cargo, and Composer. Use the corresponding prefix in the URL (e.g., `/pypi/requests`, `/cargo/serde`).
+npm, RubyGems, PyPI, Cargo, Composer, and Go. Use the corresponding prefix in the URL (e.g., `/pypi/requests`, `/cargo/serde`, `/go/gin-gonic/gin`).
 
 ## Self-hosting
 
