@@ -310,7 +310,10 @@ export function Playground() {
                 />
               ) : (
                 <div className="flex h-full min-h-[160px] items-center justify-center text-sm text-muted-foreground">
-                  Enter a package name and click &ldquo;Generate preview&rdquo;
+                  <span>
+                    Enter a package name and click{' '}
+                    <strong>Generate preview</strong>
+                  </span>
                 </div>
               )}
             </div>
