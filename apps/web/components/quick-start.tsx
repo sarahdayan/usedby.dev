@@ -1,40 +1,9 @@
 'use client';
 
 import { type ReactNode, useMemo, useState } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
-import { HighlightedCode } from '@/components/highlighted-code';
+import { CodeSnippetCard } from '@/components/code-snippet-card';
+import { ToggleGroup } from '@/components/toggle-group';
 import { ECOSYSTEMS } from '@/lib/ecosystems';
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function onCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onCopy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-      aria-label="Copy to clipboard"
-    >
-      {copied ? (
-        <>
-          <CheckIcon className="h-3.5 w-3.5 text-accent" />
-          Copied
-        </>
-      ) : (
-        <>
-          <CopyIcon className="h-3.5 w-3.5" />
-          Copy
-        </>
-      )}
-    </button>
-  );
-}
 
 const code = 'rounded bg-secondary px-1.5 py-0.5 font-mono text-foreground';
 
@@ -149,35 +118,19 @@ export function QuickStart() {
             />
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                Markdown
-              </span>
-              <CopyButton text={activeMarkdown} />
-            </div>
-            <div className="overflow-x-auto p-4">
-              <pre className="font-mono text-sm leading-loose text-foreground">
-                <HighlightedCode language="markdown">
-                  {activeMarkdown}
-                </HighlightedCode>
-              </pre>
-            </div>
-          </div>
+          <CodeSnippetCard
+            label="Markdown"
+            code={activeMarkdown}
+            language="markdown"
+            copyText={activeMarkdown}
+          />
 
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                HTML
-              </span>
-              <CopyButton text={activeHtml} />
-            </div>
-            <div className="overflow-x-auto p-4">
-              <pre className="font-mono text-sm leading-loose text-foreground">
-                <HighlightedCode language="html">{activeHtml}</HighlightedCode>
-              </pre>
-            </div>
-          </div>
+          <CodeSnippetCard
+            label="HTML"
+            code={activeHtml}
+            language="html"
+            copyText={activeHtml}
+          />
 
           <p className="text-center text-sm text-muted-foreground">
             {HINTS[platform]}
@@ -185,36 +138,5 @@ export function QuickStart() {
         </div>
       </div>
     </section>
-  );
-}
-
-interface ToggleGroupProps<T extends string> {
-  options: { label: string; value: T }[];
-  value: T;
-  onChange: (v: T) => void;
-}
-
-function ToggleGroup<T extends string>({
-  options,
-  value,
-  onChange,
-}: ToggleGroupProps<T>) {
-  return (
-    <div className="inline-flex rounded-lg border border-border bg-secondary/50 p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            value === opt.value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
   );
 }
