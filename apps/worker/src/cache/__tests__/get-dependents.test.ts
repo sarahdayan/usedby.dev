@@ -13,6 +13,10 @@ vi.mock('../cache', () => ({
   touchLastAccessed: vi.fn(),
 }));
 
+vi.mock('../append-snapshot', () => ({
+  appendSnapshot: vi.fn(),
+}));
+
 vi.mock('../../github/pipeline', () => ({
   refreshDependents: vi.fn(),
   refreshCountOnly: vi.fn(),
@@ -192,7 +196,8 @@ describe('getDependents', () => {
       PROD_LIMITS
     );
     expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', entry);
-    expect(options.waitUntil).not.toHaveBeenCalled();
+    // waitUntil is called once for appendSnapshot
+    expect(options.waitUntil).toHaveBeenCalledTimes(1);
   });
 
   it('passes through dependentCount on hit', async () => {
@@ -294,7 +299,8 @@ describe('getDependents', () => {
     expect(writeCache).toHaveBeenCalledWith(options.kv, 'npm:react', fullEntry);
     expect(result.fromCache).toBe(false);
     expect(result.refreshing).toBe(false);
-    expect(options.waitUntil).not.toHaveBeenCalled();
+    // waitUntil is called once for appendSnapshot
+    expect(options.waitUntil).toHaveBeenCalledTimes(1);
   });
 
   it('propagates pipeline errors on miss', async () => {

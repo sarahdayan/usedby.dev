@@ -4,6 +4,7 @@ import {
 } from './cache/get-dependents';
 import { DevLogger } from './dev-logger';
 import { getStrategy, registerStrategy } from './ecosystems';
+import { checkPackageExists } from './ecosystems/check-package-exists';
 import { npmStrategy } from './ecosystems/npm';
 import { phpStrategy } from './ecosystems/php';
 import { pythonStrategy } from './ecosystems/python';
@@ -11,6 +12,7 @@ import { rubyStrategy } from './ecosystems/ruby';
 import { rustStrategy } from './ecosystems/rust';
 import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
+import type { ScoredRepo } from './github/types';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
 import {
@@ -75,10 +77,13 @@ export default {
       });
     }
 
-    const isShield = segments[segments.length - 1] === 'shield.json';
-    const packageName = isShield
-      ? segments.slice(1, -1).join('/')
-      : segments.slice(1).join('/');
+    const lastSegment = segments[segments.length - 1];
+    const isShield = lastSegment === 'shield.json';
+    const isData = lastSegment === 'data.json';
+    const packageName =
+      isShield || isData
+        ? segments.slice(1, -1).join('/')
+        : segments.slice(1).join('/');
 
     if (!strategy.packageNamePattern.test(packageName)) {
       return new Response('Not found', {
@@ -89,6 +94,10 @@ export default {
 
     if (isShield) {
       return handleBadge(request, env, ctx, url, strategy, packageName);
+    }
+
+    if (isData) {
+      return handleData(request, env, ctx, url, strategy, packageName);
     }
 
     const maxParam = url.searchParams.get('max');
@@ -194,8 +203,11 @@ export default {
         limits,
       });
 
+      const repoList = repos ?? [];
       const sorted =
-        sort === 'stars' ? [...repos].sort((a, b) => b.stars - a.stars) : repos;
+        sort === 'stars'
+          ? [...repoList].sort((a, b) => b.stars - a.stars)
+          : repoList;
       const displayRepos = sorted.slice(0, max ?? limits.defaultMax);
 
       logger.timeStart('avatars');
@@ -297,6 +309,110 @@ async function handleBadge(
       },
     });
   }
+}
+
+async function handleData(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  url: URL,
+  strategy: ReturnType<typeof getStrategy> & {},
+  packageName: string
+): Promise<Response> {
+  const isDev = env.DEV === 'true';
+  const logger = new DevLogger(isDev);
+  const limits = getLimits(isDev);
+
+  const cache = caches.default;
+  const canonicalUrl = new URL(
+    `${url.origin}/${strategy.platform}/${packageName}/data.json`
+  );
+  const cacheKey = new Request(canonicalUrl.toString(), request);
+
+  if (!isDev) {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  try {
+    const { repos, dependentCount } = await getDependents({
+      strategy,
+      packageName,
+      kv: env.DEPENDENTS_CACHE,
+      env: { GITHUB_TOKEN: env.GITHUB_TOKEN },
+      waitUntil: ctx.waitUntil.bind(ctx),
+      logger,
+      limits,
+      existenceCheck: () => checkPackageExists(strategy, packageName),
+    });
+
+    if (repos === null) {
+      return jsonResponse({ error: 'Package not found' }, 404);
+    }
+
+    const versionDistribution: Record<string, number> = {};
+
+    for (const repo of repos) {
+      const version = (repo as ScoredRepo & { version?: string }).version;
+      if (version) {
+        versionDistribution[version] = (versionDistribution[version] ?? 0) + 1;
+      }
+    }
+
+    const body = {
+      package: packageName,
+      platform: strategy.platform,
+      dependentCount: dependentCount ?? repos.length,
+      fetchedAt: new Date().toISOString(),
+      repos: repos.map((r) => ({
+        fullName: r.fullName,
+        owner: r.owner,
+        name: r.name,
+        stars: r.stars,
+        lastPush: r.lastPush,
+        avatarUrl: r.avatarUrl,
+        score: r.score,
+        ...((r as ScoredRepo & { version?: string }).version != null && {
+          version: (r as ScoredRepo & { version?: string }).version,
+        }),
+      })),
+      versionDistribution,
+    };
+
+    const response = jsonResponse(body, 200, {
+      'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+    });
+
+    if (!isDev) {
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Data endpoint error:', error);
+
+    return jsonResponse({ error: 'Something went wrong' }, 500, {
+      'Cache-Control': 'no-store',
+    });
+  }
+}
+
+function jsonResponse(
+  body: unknown,
+  status: number,
+  extraHeaders: Record<string, string> = {}
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      ...extraHeaders,
+    },
+  });
 }
 
 function parseMax(value: string): number | null {

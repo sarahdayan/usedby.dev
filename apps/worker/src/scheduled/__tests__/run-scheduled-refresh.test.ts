@@ -269,6 +269,9 @@ describe('runScheduledRefresh', () => {
     const result = await runScheduledRefresh(ENV, NOW);
 
     expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith('npm:react');
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith(
+      'history:npm:react'
+    );
     expect(result.evicted).toBe(1);
     expect(result.refreshed).toBe(0);
     expect(refreshDependents).not.toHaveBeenCalled();
@@ -320,7 +323,9 @@ describe('runScheduledRefresh', () => {
     const result = await runScheduledRefresh(ENV, NOW);
 
     expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith('npm:old-lib');
-    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledTimes(1);
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith(
+      'history:npm:old-lib'
+    );
     expect(result.evicted).toBe(1);
     expect(result.refreshed).toBe(1);
     expect(result.keysScanned).toBe(2);
@@ -342,6 +347,9 @@ describe('runScheduledRefresh', () => {
 
     expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith(
       'npm:boundary-lib'
+    );
+    expect(ENV.DEPENDENTS_CACHE.delete).toHaveBeenCalledWith(
+      'history:npm:boundary-lib'
     );
     expect(result.evicted).toBe(1);
     expect(result.refreshed).toBe(0);
@@ -404,7 +412,8 @@ describe('runScheduledRefresh', () => {
 
     await runScheduledRefresh(ENV, NOW);
 
-    expect(callOrder).toEqual(['delete', 'refresh']);
+    // Two deletes (data key + history key), then refresh
+    expect(callOrder).toEqual(['delete', 'delete', 'refresh']);
   });
 
   it('dispatches to refreshCountOnly for count-only entries', async () => {
@@ -518,6 +527,7 @@ function createMockKV(options: MockKVOptions = {}) {
 
   return {
     list,
+    get: vi.fn(() => Promise.resolve(null)),
     put: vi.fn(() => Promise.resolve()),
     delete: vi.fn(() => Promise.resolve()),
   } as unknown as KVNamespace;
