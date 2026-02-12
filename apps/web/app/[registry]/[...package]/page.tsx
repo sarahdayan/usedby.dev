@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Footer } from '@/components/footer';
 import { DependentList } from '@/components/package-page/dependent-list';
 import { EmbedSnippets } from '@/components/package-page/embed-snippets';
-import { MosaicImage } from '@/components/package-page/mosaic-image';
 import { TrendsPlaceholder } from '@/components/package-page/trends-placeholder';
 import { VersionChart } from '@/components/package-page/version-chart';
 import { ECOSYSTEMS } from '@/lib/ecosystems';
@@ -90,10 +89,6 @@ export default async function PackagePage({ params }: PageProps) {
           {data.dependentCount !== 1 ? 's' : ''}
         </p>
       </header>
-
-      <section className="mx-auto max-w-5xl px-6 pb-12">
-        <MosaicImage platform={registry} packageName={packageName} />
-      </section>
 
       <DependentList repos={data.repos} />
       <VersionChart versionDistribution={data.versionDistribution} />

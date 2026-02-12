@@ -1,4 +1,5 @@
 import { CodeSnippetCard } from '@/components/code-snippet-card';
+import { MosaicImage } from '@/components/package-page/mosaic-image';
 
 interface EmbedSnippetsProps {
   platform: string;
@@ -19,6 +20,10 @@ export function EmbedSnippets({ platform, packageName }: EmbedSnippetsProps) {
       <p className="mt-2 text-muted-foreground">
         Copy a snippet to add to your README or docs.
       </p>
+
+      <div className="mt-6">
+        <MosaicImage platform={platform} packageName={packageName} />
+      </div>
 
       <div className="mt-6 space-y-4">
         <CodeSnippetCard
