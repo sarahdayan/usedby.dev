@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -409,6 +410,17 @@ export function Playground() {
               )}
             </div>
           </div>
+
+          {activePackage && (
+            <div className="flex justify-end">
+              <Link
+                href={`/${platform}/${activePackage}`}
+                className="inline-flex items-center gap-1 text-sm text-accent transition-opacity hover:opacity-80"
+              >
+                View full page &rarr;
+              </Link>
+            </div>
+          )}
 
           {packageName && (
             <div className="space-y-4">
