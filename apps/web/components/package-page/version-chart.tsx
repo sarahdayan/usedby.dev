@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 import {
@@ -23,31 +23,66 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function VersionChart({ versionDistribution }: VersionChartProps) {
-  const data = useMemo(() => {
-    const entries = Object.entries(versionDistribution);
+function getMajorVersion(version: string): string {
+  const match = version.match(/(\d+)/);
 
-    if (entries.length === 0) {
+  return match?.[1] ?? version;
+}
+
+function buildChartData(
+  entries: [string, number][]
+): { version: string; count: number }[] {
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const sorted = entries.sort(([, a], [, b]) => b - a);
+
+  if (sorted.length <= MAX_VERSIONS) {
+    return sorted.map(([version, count]) => ({ version, count }));
+  }
+
+  const top = sorted.slice(0, MAX_VERSIONS);
+  const rest = sorted.slice(MAX_VERSIONS);
+  const otherCount = rest.reduce((sum, [, count]) => sum + count, 0);
+
+  return [
+    ...top.map(([version, count]) => ({ version, count })),
+    { version: 'Other', count: otherCount },
+  ];
+}
+
+export function VersionChart({ versionDistribution }: VersionChartProps) {
+  const [selectedMajor, setSelectedMajor] = useState<string | null>(null);
+
+  const majorData = useMemo(() => {
+    const groups = new Map<string, number>();
+
+    for (const [version, count] of Object.entries(versionDistribution)) {
+      const major = getMajorVersion(version);
+      groups.set(major, (groups.get(major) ?? 0) + count);
+    }
+
+    return buildChartData(
+      [...groups.entries()].map(([m, c]) => [`v${m}.x`, c])
+    );
+  }, [versionDistribution]);
+
+  const drillDownData = useMemo(() => {
+    if (!selectedMajor) {
       return [];
     }
 
-    const sorted = entries.sort(([, a], [, b]) => b - a);
+    const entries = Object.entries(versionDistribution).filter(
+      ([version]) => getMajorVersion(version) === selectedMajor
+    );
 
-    if (sorted.length <= MAX_VERSIONS) {
-      return sorted.map(([version, count]) => ({ version, count }));
-    }
+    return buildChartData(entries);
+  }, [versionDistribution, selectedMajor]);
 
-    const top = sorted.slice(0, MAX_VERSIONS);
-    const rest = sorted.slice(MAX_VERSIONS);
-    const otherCount = rest.reduce((sum, [, count]) => sum + count, 0);
+  const data = selectedMajor ? drillDownData : majorData;
 
-    return [
-      ...top.map(([version, count]) => ({ version, count })),
-      { version: 'Other', count: otherCount },
-    ];
-  }, [versionDistribution]);
-
-  if (data.length === 0) {
+  if (majorData.length === 0) {
     return (
       <section className="mx-auto max-w-5xl px-6 py-12">
         <h2 className="text-xl font-semibold text-foreground">
@@ -67,6 +102,37 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
       <h2 className="text-xl font-semibold text-foreground">
         Version Distribution
       </h2>
+      {majorData.length > 1 && (
+        <div className="mt-4 inline-flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMajor(null)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              selectedMajor === null
+                ? 'bg-secondary text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            All
+          </button>
+          {majorData.map(({ version }) => (
+            <button
+              key={version}
+              type="button"
+              onClick={() =>
+                setSelectedMajor(version.replace(/^v/, '').replace(/\.x$/, ''))
+              }
+              className={`rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all ${
+                selectedMajor === version.replace(/^v/, '').replace(/\.x$/, '')
+                  ? 'bg-secondary text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {version}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mt-4 rounded-xl border border-border bg-card p-6">
         <ChartContainer
           config={chartConfig}
