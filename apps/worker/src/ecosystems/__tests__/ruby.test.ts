@@ -25,36 +25,46 @@ describe('rubyStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true for single-quoted gem name', () => {
-      expect(rubyStrategy.isDependency("gem 'rails'", 'rails')).toBe(true);
+    it('returns found for single-quoted gem name', () => {
+      expect(rubyStrategy.isDependency("gem 'rails'", 'rails')).toEqual({
+        found: true,
+      });
     });
 
-    it('returns true for double-quoted gem name', () => {
-      expect(rubyStrategy.isDependency('gem "rails"', 'rails')).toBe(true);
+    it('returns found for double-quoted gem name', () => {
+      expect(rubyStrategy.isDependency('gem "rails"', 'rails')).toEqual({
+        found: true,
+      });
     });
 
-    it('returns true with version constraint', () => {
-      expect(rubyStrategy.isDependency("gem 'rails', '~> 7.0'", 'rails')).toBe(
-        true
-      );
+    it('returns found with version constraint', () => {
+      expect(
+        rubyStrategy.isDependency("gem 'rails', '~> 7.0'", 'rails')
+      ).toEqual({ found: true, version: '~> 7.0' });
     });
 
-    it('returns true with leading whitespace', () => {
-      expect(rubyStrategy.isDependency("  gem 'rails'", 'rails')).toBe(true);
+    it('returns found with leading whitespace', () => {
+      expect(rubyStrategy.isDependency("  gem 'rails'", 'rails')).toEqual({
+        found: true,
+      });
     });
 
-    it('returns false when gem is not present', () => {
-      expect(rubyStrategy.isDependency("gem 'nokogiri'", 'rails')).toBe(false);
+    it('returns not found when gem is not present', () => {
+      expect(rubyStrategy.isDependency("gem 'nokogiri'", 'rails')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for partial name match', () => {
+    it('returns not found for partial name match', () => {
       expect(
         rubyStrategy.isDependency("gem 'rails-html-sanitizer'", 'rails')
-      ).toBe(false);
+      ).toEqual({ found: false });
     });
 
-    it('returns false for empty content', () => {
-      expect(rubyStrategy.isDependency('', 'rails')).toBe(false);
+    it('returns not found for empty content', () => {
+      expect(rubyStrategy.isDependency('', 'rails')).toEqual({
+        found: false,
+      });
     });
   });
 

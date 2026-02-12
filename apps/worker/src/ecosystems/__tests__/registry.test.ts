@@ -51,7 +51,7 @@ function createMockStrategy(platform = 'mock'): EcosystemStrategy {
     packageNamePattern: /^[a-z]+$/,
     buildSearchQuery: (packageName: string) =>
       `"${packageName}" filename:mock.json`,
-    isDependency: () => true,
+    isDependency: () => ({ found: true }),
     resolveGitHubRepo: async () => null,
   };
 }

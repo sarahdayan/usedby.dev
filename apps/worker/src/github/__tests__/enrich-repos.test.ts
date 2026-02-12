@@ -56,6 +56,7 @@ describe('enrichRepos', () => {
         isFork: false,
         archived: false,
         manifestPath: 'package.json',
+        version: '^1.0.0',
       },
       {
         owner: 'corp',
@@ -67,6 +68,7 @@ describe('enrichRepos', () => {
         isFork: true,
         archived: true,
         manifestPath: 'package.json',
+        version: '^1.0.0',
       },
     ]);
   });

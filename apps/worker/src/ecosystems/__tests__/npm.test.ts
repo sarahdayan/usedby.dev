@@ -31,44 +31,60 @@ describe('npmStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true when package is in dependencies', () => {
+    it('returns found with version when package is in dependencies', () => {
       const manifest = JSON.stringify({ dependencies: { react: '^18.0.0' } });
 
-      expect(npmStrategy.isDependency(manifest, 'react')).toBe(true);
+      expect(npmStrategy.isDependency(manifest, 'react')).toEqual({
+        found: true,
+        version: '^18.0.0',
+      });
     });
 
-    it('returns true when package is in devDependencies', () => {
+    it('returns found with version when package is in devDependencies', () => {
       const manifest = JSON.stringify({
         devDependencies: { vitest: '^1.0.0' },
       });
 
-      expect(npmStrategy.isDependency(manifest, 'vitest')).toBe(true);
+      expect(npmStrategy.isDependency(manifest, 'vitest')).toEqual({
+        found: true,
+        version: '^1.0.0',
+      });
     });
 
-    it('returns true when package is in peerDependencies', () => {
+    it('returns found with version when package is in peerDependencies', () => {
       const manifest = JSON.stringify({
         peerDependencies: { react: '>=17' },
       });
 
-      expect(npmStrategy.isDependency(manifest, 'react')).toBe(true);
+      expect(npmStrategy.isDependency(manifest, 'react')).toEqual({
+        found: true,
+        version: '>=17',
+      });
     });
 
-    it('returns true when package is in optionalDependencies', () => {
+    it('returns found with version when package is in optionalDependencies', () => {
       const manifest = JSON.stringify({
         optionalDependencies: { fsevents: '^2.0.0' },
       });
 
-      expect(npmStrategy.isDependency(manifest, 'fsevents')).toBe(true);
+      expect(npmStrategy.isDependency(manifest, 'fsevents')).toEqual({
+        found: true,
+        version: '^2.0.0',
+      });
     });
 
-    it('returns false when package is absent', () => {
+    it('returns not found when package is absent', () => {
       const manifest = JSON.stringify({ dependencies: { lodash: '^4.0.0' } });
 
-      expect(npmStrategy.isDependency(manifest, 'react')).toBe(false);
+      expect(npmStrategy.isDependency(manifest, 'react')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for malformed JSON', () => {
-      expect(npmStrategy.isDependency('not json{', 'react')).toBe(false);
+    it('returns not found for malformed JSON', () => {
+      expect(npmStrategy.isDependency('not json{', 'react')).toEqual({
+        found: false,
+      });
     });
   });
 

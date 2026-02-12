@@ -25,62 +25,76 @@ describe('pythonStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true for exact package name', () => {
-      expect(pythonStrategy.isDependency('requests\n', 'requests')).toBe(true);
+    it('returns found for exact package name', () => {
+      expect(pythonStrategy.isDependency('requests\n', 'requests')).toEqual({
+        found: true,
+      });
     });
 
-    it('returns true with version specifier', () => {
+    it('returns found with version specifier', () => {
       expect(
         pythonStrategy.isDependency('requests==2.28.0\n', 'requests')
-      ).toBe(true);
+      ).toEqual({ found: true, version: '==2.28.0' });
     });
 
-    it('returns true with range specifier', () => {
+    it('returns found with range specifier', () => {
       expect(
         pythonStrategy.isDependency('requests>=2.0,<3.0\n', 'requests')
-      ).toBe(true);
+      ).toEqual({ found: true, version: '>=2.0,<3.0' });
     });
 
-    it('returns true with extras', () => {
+    it('returns found with extras and version', () => {
+      expect(
+        pythonStrategy.isDependency('requests[security]>=2.0\n', 'requests')
+      ).toEqual({ found: true, version: '>=2.0' });
+    });
+
+    it('returns found with extras only', () => {
       expect(
         pythonStrategy.isDependency('requests[security]\n', 'requests')
-      ).toBe(true);
+      ).toEqual({ found: true });
     });
 
-    it('returns true case-insensitively', () => {
-      expect(pythonStrategy.isDependency('Requests\n', 'requests')).toBe(true);
+    it('returns found case-insensitively', () => {
+      expect(pythonStrategy.isDependency('Requests\n', 'requests')).toEqual({
+        found: true,
+      });
     });
 
-    it('returns true with hyphen/underscore normalization', () => {
-      expect(pythonStrategy.isDependency('my-package\n', 'my_package')).toBe(
-        true
+    it('returns found with hyphen/underscore normalization', () => {
+      expect(pythonStrategy.isDependency('my-package\n', 'my_package')).toEqual(
+        { found: true }
       );
     });
 
-    it('returns false when package not present', () => {
-      expect(pythonStrategy.isDependency('flask\n', 'requests')).toBe(false);
+    it('returns not found when package not present', () => {
+      expect(pythonStrategy.isDependency('flask\n', 'requests')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for partial name match', () => {
+    it('returns not found for partial name match', () => {
       expect(
         pythonStrategy.isDependency('requests-oauthlib\n', 'requests')
-      ).toBe(false);
+      ).toEqual({ found: false });
     });
 
     it('skips comment lines', () => {
       expect(
         pythonStrategy.isDependency('# requests\nflask\n', 'requests')
-      ).toBe(false);
+      ).toEqual({ found: false });
     });
 
     it('skips pip flag lines', () => {
-      expect(pythonStrategy.isDependency('-r base.txt\nflask\n', 'base')).toBe(
-        false
-      );
+      expect(
+        pythonStrategy.isDependency('-r base.txt\nflask\n', 'base')
+      ).toEqual({ found: false });
     });
 
     it('handles empty content', () => {
-      expect(pythonStrategy.isDependency('', 'requests')).toBe(false);
+      expect(pythonStrategy.isDependency('', 'requests')).toEqual({
+        found: false,
+      });
     });
   });
 
