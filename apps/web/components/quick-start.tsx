@@ -18,18 +18,18 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={onCopy}
-      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       aria-label="Copy to clipboard"
     >
       {copied ? (
         <>
           <CheckIcon className="h-3.5 w-3.5 text-accent" />
-          <span className="text-accent">Copied</span>
+          Copied
         </>
       ) : (
         <>
           <CopyIcon className="h-3.5 w-3.5" />
-          <span>Copy</span>
+          Copy
         </>
       )}
     </button>

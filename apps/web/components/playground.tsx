@@ -417,7 +417,7 @@ export function Playground() {
                   <span className="text-xs font-medium text-muted-foreground">
                     Markdown
                   </span>
-                  <CopyButton text={activeMarkdownEmbed} label="Markdown" />
+                  <CopyButton text={activeMarkdownEmbed} />
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
@@ -433,7 +433,7 @@ export function Playground() {
                   <span className="text-xs font-medium text-muted-foreground">
                     HTML
                   </span>
-                  <CopyButton text={activeHtmlEmbed} label="HTML" />
+                  <CopyButton text={activeHtmlEmbed} />
                 </div>
                 <div className="overflow-x-auto p-4">
                   <pre className="font-mono text-sm leading-loose text-foreground">
@@ -517,12 +517,7 @@ function LoadingMessage() {
   );
 }
 
-interface CopyButtonProps {
-  text: string;
-  label: string;
-}
-
-function CopyButton({ text, label }: CopyButtonProps) {
+function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
   async function onCopy() {
@@ -536,7 +531,7 @@ function CopyButton({ text, label }: CopyButtonProps) {
       type="button"
       onClick={onCopy}
       className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-      aria-label={`Copy ${label}`}
+      aria-label="Copy to clipboard"
     >
       {copied ? (
         <>
@@ -546,7 +541,7 @@ function CopyButton({ text, label }: CopyButtonProps) {
       ) : (
         <>
           <CopyIcon className="h-3.5 w-3.5" />
-          Copy {label}
+          Copy
         </>
       )}
     </button>
