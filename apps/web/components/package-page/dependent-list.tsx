@@ -13,6 +13,8 @@ interface DependentListProps {
   repos: PackageRepo[];
 }
 
+const PAGE_SIZE = 10;
+
 const sortOptions: { label: string; value: SortKey }[] = [
   { label: 'Score', value: 'score' },
   { label: 'Stars', value: 'stars' },
@@ -56,6 +58,7 @@ function sortRepos(repos: PackageRepo[], key: SortKey): PackageRepo[] {
 export function DependentList({ repos }: DependentListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('score');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -75,6 +78,24 @@ export function DependentList({ repos }: DependentListProps) {
     );
   }, [repos, sortKey, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  // Reset to page 1 when search or sort changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleSortChange = (key: SortKey) => {
+    setSortKey(key);
+    setPage(1);
+  };
+
   return (
     <section className="mx-auto max-w-5xl px-6 py-12">
       <h2 className="text-xl font-semibold text-foreground">Dependents</h2>
@@ -84,13 +105,13 @@ export function DependentList({ repos }: DependentListProps) {
           type="search"
           placeholder="Filter dependents..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="h-9 w-full bg-card sm:max-w-xs"
         />
         <ToggleGroup
           options={sortOptions}
           value={sortKey}
-          onChange={setSortKey}
+          onChange={handleSortChange}
         />
       </div>
 
@@ -112,7 +133,7 @@ export function DependentList({ repos }: DependentListProps) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((repo) => (
+                {paginated.map((repo) => (
                   <tr
                     key={repo.fullName}
                     className="border-b border-border last:border-b-0 transition-colors hover:bg-card/60"
@@ -152,7 +173,7 @@ export function DependentList({ repos }: DependentListProps) {
 
           {/* Mobile card list */}
           <div className="mt-4 flex flex-col gap-3 sm:hidden">
-            {filtered.map((repo) => (
+            {paginated.map((repo) => (
               <div
                 key={repo.fullName}
                 className="rounded-xl border border-border bg-card p-4"
@@ -198,6 +219,35 @@ export function DependentList({ repos }: DependentListProps) {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}&ndash;
+                {Math.min(currentPage * PAGE_SIZE, filtered.length)} of{' '}
+                {filtered.length}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>
