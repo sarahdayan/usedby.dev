@@ -129,6 +129,23 @@ describe('worker', () => {
       expect(message.retry).not.toHaveBeenCalled();
     });
 
+    it('acks and skips invalid message body', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const message = createQueueMessage({ bad: 'data' } as any);
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(handlePipelineMessage).not.toHaveBeenCalled();
+      expect(message.ack).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid message body'),
+        expect.anything()
+      );
+      consoleSpy.mockRestore();
+    });
+
     it('retries message on failure', async () => {
       vi.mocked(handlePipelineMessage).mockRejectedValue(
         new Error('Pipeline failed')

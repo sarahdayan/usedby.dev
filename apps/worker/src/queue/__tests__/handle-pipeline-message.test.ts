@@ -95,7 +95,7 @@ describe('handlePipelineMessage', () => {
   });
 
   it('skips unknown platforms without throwing', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const env = createEnv();
 
     await handlePipelineMessage(

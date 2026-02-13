@@ -13,7 +13,7 @@ import { rustStrategy } from './ecosystems/rust';
 import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
 import { handlePipelineMessage } from './queue/handle-pipeline-message';
-import type { PipelineMessage } from './queue/types';
+import { isPipelineMessage } from './queue/types';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
 import {
@@ -42,8 +42,14 @@ registerStrategy(goStrategy);
 export default {
   async queue(batch, env) {
     for (const message of batch.messages) {
+      if (!isPipelineMessage(message.body)) {
+        console.warn('[queue] Invalid message body, skipping:', message.body);
+        message.ack();
+        continue;
+      }
+
       try {
-        await handlePipelineMessage(message.body as PipelineMessage, env);
+        await handlePipelineMessage(message.body, env);
         message.ack();
       } catch (error) {
         console.error('[queue] Failed to process message:', error);

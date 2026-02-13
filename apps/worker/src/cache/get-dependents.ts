@@ -119,6 +119,13 @@ export async function getDependents(
     const lockKey = buildLockKey(key);
     const existing = await kv.get(lockKey);
 
+    // KV doesn't support atomic check-and-set, so concurrent requests may
+    // both pass this check and enqueue duplicate messages. This is harmless:
+    // the consumer is idempotent (writes the same result to the same key).
+    //
+    // If the queue consumer fails permanently, the pending KV entry persists
+    // but self-heals: the lock expires after LOCK_TTL_SECONDS (5 min), so
+    // the next visitor will see a cache miss and re-enqueue.
     if (existing === null) {
       const pendingEntry: CacheEntry = {
         repos: [],

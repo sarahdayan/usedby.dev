@@ -11,11 +11,17 @@ interface PendingPageProps {
   packageName: string;
 }
 
+class PermanentError extends Error {}
+
 async function fetcher(url: string) {
   const res = await fetch(url);
 
   if (res.status === 202) {
     return null;
+  }
+
+  if (res.status === 404) {
+    throw new PermanentError('Package not found');
   }
 
   if (!res.ok) {
@@ -34,6 +40,12 @@ export function PendingPage({ registry, packageName }: PendingPageProps) {
       if (data) {
         router.refresh();
       }
+    },
+    onErrorRetry(error, _key, _config, revalidate, { retryCount }) {
+      if (error instanceof PermanentError) {
+        return;
+      }
+      setTimeout(() => revalidate({ retryCount }), 3_000);
     },
   });
 

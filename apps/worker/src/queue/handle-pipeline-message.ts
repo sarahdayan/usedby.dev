@@ -19,7 +19,7 @@ export async function handlePipelineMessage(
   const strategy = getStrategy(platform);
 
   if (!strategy) {
-    console.error(
+    console.warn(
       `[queue] Unknown platform "${platform}" for ${packageName}, skipping`
     );
     return;
