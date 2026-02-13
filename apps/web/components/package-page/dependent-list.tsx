@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 import { ToggleGroup } from '@/components/toggle-group';
 import { Input } from '@/components/ui/input';
@@ -104,7 +105,7 @@ export function DependentList({ repos }: DependentListProps) {
                     className="border-b border-border last:border-b-0 transition-colors hover:bg-card/60"
                   >
                     <td className="px-4 py-3">
-                      <a
+                      <Link
                         href={`https://github.com/${repo.fullName}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -119,7 +120,7 @@ export function DependentList({ repos }: DependentListProps) {
                           loading="lazy"
                         />
                         <span className="truncate">{repo.fullName}</span>
-                      </a>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {formatStars(repo.stars)}
@@ -142,7 +143,7 @@ export function DependentList({ repos }: DependentListProps) {
                 key={repo.fullName}
                 className="rounded-xl border border-border bg-card p-4"
               >
-                <a
+                <Link
                   href={`https://github.com/${repo.fullName}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -157,7 +158,7 @@ export function DependentList({ repos }: DependentListProps) {
                     loading="lazy"
                   />
                   <span className="truncate">{repo.fullName}</span>
-                </a>
+                </Link>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div>
                     <span className="block font-medium text-foreground/60">
