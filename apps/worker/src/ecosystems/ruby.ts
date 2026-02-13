@@ -12,11 +12,17 @@ export const rubyStrategy: EcosystemStrategy = {
   isDependency(manifestContent: string, packageName: string) {
     const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(
-      `^\\s*gem\\s+(['"])${escaped}\\1(?:\\s*,|\\s*$)`,
+      `^\\s*gem\\s+(['"])${escaped}\\1(?:\\s*,\\s*(['"])([^'"]*?)\\2)?`,
       'm'
     );
 
-    return pattern.test(manifestContent);
+    const match = manifestContent.match(pattern);
+
+    if (!match) {
+      return { found: false };
+    }
+
+    return { found: true, version: match[3] || undefined };
   },
 
   async resolveGitHubRepo(packageName: string) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { HighlightedCode } from '@/components/highlighted-code';
+import { CodeSnippetCard } from '@/components/code-snippet-card';
+import { ToggleGroup } from '@/components/toggle-group';
 import { ECOSYSTEMS, getEcosystem, stripRegistryUrl } from '@/lib/ecosystems';
 
 type EmbedType = 'image' | 'badge';
@@ -410,75 +411,37 @@ export function Playground() {
             </div>
           </div>
 
+          {activePackage && (
+            <div className="flex justify-end">
+              <Link
+                href={`/${platform}/${activePackage}`}
+                className="inline-flex items-center gap-1 text-sm text-accent transition-opacity hover:opacity-80"
+              >
+                View full page &rarr;
+              </Link>
+            </div>
+          )}
+
           {packageName && (
             <div className="space-y-4">
-              <div className="overflow-hidden rounded-lg border border-border bg-card">
-                <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Markdown
-                  </span>
-                  <CopyButton text={activeMarkdownEmbed} />
-                </div>
-                <div className="overflow-x-auto p-4">
-                  <pre className="font-mono text-sm leading-loose text-foreground">
-                    <HighlightedCode language="markdown">
-                      {activeMarkdownEmbed}
-                    </HighlightedCode>
-                  </pre>
-                </div>
-              </div>
+              <CodeSnippetCard
+                label="Markdown"
+                code={activeMarkdownEmbed}
+                language="markdown"
+                copyText={activeMarkdownEmbed}
+              />
 
-              <div className="overflow-hidden rounded-lg border border-border bg-card">
-                <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    HTML
-                  </span>
-                  <CopyButton text={activeHtmlEmbed} />
-                </div>
-                <div className="overflow-x-auto p-4">
-                  <pre className="font-mono text-sm leading-loose text-foreground">
-                    <HighlightedCode language="html">
-                      {activeHtmlEmbed}
-                    </HighlightedCode>
-                  </pre>
-                </div>
-              </div>
+              <CodeSnippetCard
+                label="HTML"
+                code={activeHtmlEmbed}
+                language="html"
+                copyText={activeHtmlEmbed}
+              />
             </div>
           )}
         </div>
       </div>
     </section>
-  );
-}
-
-interface ToggleGroupProps<T extends string> {
-  options: { label: string; value: T }[];
-  value: T;
-  onChange: (v: T) => void;
-}
-
-function ToggleGroup<T extends string>({
-  options,
-  value,
-  onChange,
-}: ToggleGroupProps<T>) {
-  return (
-    <div className="inline-flex rounded-lg border border-border bg-secondary/50 p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            value === opt.value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -514,36 +477,5 @@ function LoadingMessage() {
     <p key={index} className="animate-fade-in text-xs text-muted-foreground">
       {LOADING_MESSAGES[index]}
     </p>
-  );
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function onCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onCopy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-      aria-label="Copy to clipboard"
-    >
-      {copied ? (
-        <>
-          <CheckIcon className="h-3.5 w-3.5 text-accent" />
-          Copied
-        </>
-      ) : (
-        <>
-          <CopyIcon className="h-3.5 w-3.5" />
-          Copy
-        </>
-      )}
-    </button>
   );
 }

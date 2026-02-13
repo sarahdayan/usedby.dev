@@ -12,11 +12,17 @@ export const goStrategy: EcosystemStrategy = {
   isDependency(manifestContent: string, packageName: string) {
     const escaped = escapeRegex(packageName);
     const pattern = new RegExp(
-      `^(?:require\\s+|\\s+)github\\.com/${escaped}\\s`,
+      `^(?:require\\s+|\\s+)github\\.com/${escaped}\\s+(\\S+)`,
       'm'
     );
 
-    return pattern.test(manifestContent);
+    const match = manifestContent.match(pattern);
+
+    if (!match) {
+      return { found: false };
+    }
+
+    return { found: true, version: match[1] };
   },
 
   async resolveGitHubRepo(packageName: string) {

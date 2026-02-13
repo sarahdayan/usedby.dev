@@ -47,11 +47,15 @@ export const pythonStrategy: EcosystemStrategy = {
       }
 
       if (normalizeName(match[1]!) === normalizedTarget) {
-        return true;
+        const rest = line.slice(match[0].length);
+        const afterExtras = rest.replace(/^\[[^\]]*\]/, '');
+        const versionMatch = afterExtras.match(/^([><=!~]+.+)/);
+        const version = versionMatch ? versionMatch[1]!.trim() : undefined;
+        return { found: true, version };
       }
     }
 
-    return false;
+    return { found: false };
   },
 
   async resolveGitHubRepo(packageName: string) {

@@ -8,6 +8,7 @@ export interface DependentRepo {
   isFork: boolean;
   archived: boolean;
   manifestPath: string;
+  version?: string;
   /** @deprecated Use `manifestPath`. Kept for KV backwards compatibility. */
   packageJsonPath?: string;
 }

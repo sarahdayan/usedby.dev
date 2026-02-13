@@ -16,3 +16,14 @@ export type CacheResult =
   | { status: 'hit'; entry: CacheEntry }
   | { status: 'stale'; entry: CacheEntry }
   | { status: 'miss'; entry: null };
+
+export interface HistorySnapshot {
+  date: string;
+  dependentCount: number;
+  repoCount: number;
+  versionDistribution?: Record<string, number>;
+}
+
+export interface HistoryEntry {
+  snapshots: HistorySnapshot[];
+}

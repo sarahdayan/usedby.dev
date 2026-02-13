@@ -122,7 +122,12 @@ async function enrichBatch(
       continue;
     }
 
-    if (!strategy.isDependency(result.manifest?.text ?? '', packageName)) {
+    const depResult = strategy.isDependency(
+      result.manifest?.text ?? '',
+      packageName
+    );
+
+    if (!depResult.found) {
       falsePositives.push(batch[j]!.fullName);
       continue;
     }
@@ -135,6 +140,7 @@ async function enrichBatch(
       avatarUrl: result.owner.avatarUrl,
       isFork: result.isFork,
       archived: result.isArchived,
+      version: depResult.version,
     });
   }
 

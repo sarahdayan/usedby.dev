@@ -5,6 +5,7 @@ import type { EcosystemStrategy } from '../ecosystems/strategy';
 import { refreshCountOnly, refreshDependents } from '../github/pipeline';
 import type { PipelineLimits } from '../github/pipeline-limits';
 import { PROD_LIMITS } from '../github/pipeline-limits';
+import { appendSnapshot } from './append-snapshot';
 import {
   FRESH_TTL_MS,
   buildCacheKey,
@@ -22,10 +23,12 @@ export interface GetDependentsOptions {
   now?: Date;
   logger?: DevLogger;
   limits?: PipelineLimits;
+  /** Optional guard called on cache miss before running the pipeline. Return false to abort. */
+  existenceCheck?: () => Promise<boolean>;
 }
 
 export interface GetDependentsResult {
-  repos: ScoredRepo[];
+  repos: ScoredRepo[] | null;
   fromCache: boolean;
   refreshing: boolean;
   dependentCount?: number;
@@ -100,6 +103,15 @@ export async function getDependents(
     'cache',
     cached.entry?.countOnly ? 'count-only entry, upgrading' : 'miss'
   );
+
+  if (options.existenceCheck) {
+    const exists = await options.existenceCheck();
+    if (!exists) {
+      logger?.log('cache', 'package does not exist, skipping pipeline');
+      return { repos: null, fromCache: false, refreshing: false };
+    }
+  }
+
   const entry = await refreshDependents(
     strategy,
     packageName,
@@ -109,6 +121,7 @@ export async function getDependents(
     limits
   );
   await writeCache(kv, key, entry);
+  waitUntil(appendSnapshot(kv, key, entry, now));
 
   return {
     repos: entry.repos,
@@ -218,6 +231,7 @@ async function tryBackgroundRefresh(
           limits
         );
     await writeCache(kv, key, entry);
+    await appendSnapshot(kv, key, entry, now);
   } catch (error) {
     // Refresh failed — still bump lastAccessedAt so the entry isn't
     // evicted while it's actively being served to users

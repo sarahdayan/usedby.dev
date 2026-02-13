@@ -25,56 +25,80 @@ describe('rustStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true for simple version string', () => {
+    it('returns found with version for simple version string', () => {
       const manifest = `[dependencies]\nserde = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns true for inline table', () => {
+    it('returns found with version for inline table', () => {
       const manifest = `[dependencies]\nserde = { version = "1.0", features = ["derive"] }`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns true for dotted key', () => {
+    it('returns found with version for dotted key', () => {
       const manifest = `[dependencies]\nserde.version = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns true under [dev-dependencies]', () => {
+    it('returns found under [dev-dependencies]', () => {
       const manifest = `[dev-dependencies]\nserde = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns true under [build-dependencies]', () => {
+    it('returns found under [build-dependencies]', () => {
       const manifest = `[build-dependencies]\nserde = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns true with leading whitespace', () => {
+    it('returns found with leading whitespace', () => {
       const manifest = `[dependencies]\n  serde = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(true);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: true,
+        version: '1.0',
+      });
     });
 
-    it('returns false when crate not present', () => {
+    it('returns not found when crate not present', () => {
       const manifest = `[dependencies]\ntokio = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(false);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for partial name match', () => {
+    it('returns not found for partial name match', () => {
       const manifest = `[dependencies]\nserde_json = "1.0"`;
 
-      expect(rustStrategy.isDependency(manifest, 'serde')).toBe(false);
+      expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for empty content', () => {
-      expect(rustStrategy.isDependency('', 'serde')).toBe(false);
+    it('returns not found for empty content', () => {
+      expect(rustStrategy.isDependency('', 'serde')).toEqual({
+        found: false,
+      });
     });
   });
 

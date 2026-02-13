@@ -22,57 +22,82 @@ describe('goStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true for a require line', () => {
+    it('returns found with version for a require line', () => {
       const manifest = `module example.com/myapp\n\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(true);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: true,
+        version: 'v1.9.1',
+      });
     });
 
-    it('returns true for a single-line require', () => {
+    it('returns found with version for a single-line require', () => {
       const manifest = `module example.com/myapp\n\nrequire github.com/gin-gonic/gin v1.9.1`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(true);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: true,
+        version: 'v1.9.1',
+      });
     });
 
-    it('returns true with leading whitespace (tab)', () => {
+    it('returns found with version with leading whitespace (tab)', () => {
       const manifest = `require (\n\tgithub.com/gin-gonic/gin v1.9.1\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(true);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: true,
+        version: 'v1.9.1',
+      });
     });
 
-    it('returns true with leading whitespace (spaces)', () => {
+    it('returns found with version with leading whitespace (spaces)', () => {
       const manifest = `require (\n    github.com/gin-gonic/gin v1.9.1\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(true);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: true,
+        version: 'v1.9.1',
+      });
     });
 
-    it('returns false when module not present', () => {
+    it('returns not found when module not present', () => {
       const manifest = `require (\n\tgithub.com/stretchr/testify v1.8.0\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(false);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for partial name match', () => {
+    it('returns not found for partial name match', () => {
       const manifest = `require (\n\tgithub.com/gin-gonic/gin-contrib v0.1.0\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(false);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for the module declaration', () => {
+    it('returns not found for the module declaration', () => {
       const manifest = `module github.com/gin-gonic/gin\n\nrequire (\n\tgolang.org/x/net v0.0.0\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toBe(false);
+      expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for empty content', () => {
-      expect(goStrategy.isDependency('', 'gin-gonic/gin')).toBe(false);
+    it('returns not found for empty content', () => {
+      expect(goStrategy.isDependency('', 'gin-gonic/gin')).toEqual({
+        found: false,
+      });
     });
 
     it('escapes special regex characters in package name', () => {
       const manifest = `require (\n\tgithub.com/foo.bar/baz v1.0.0\n)`;
 
-      expect(goStrategy.isDependency(manifest, 'foo.bar/baz')).toBe(true);
-      expect(goStrategy.isDependency(manifest, 'fooXbar/baz')).toBe(false);
+      expect(goStrategy.isDependency(manifest, 'foo.bar/baz')).toEqual({
+        found: true,
+        version: 'v1.0.0',
+      });
+      expect(goStrategy.isDependency(manifest, 'fooXbar/baz')).toEqual({
+        found: false,
+      });
     });
   });
 

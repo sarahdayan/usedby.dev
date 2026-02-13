@@ -1,3 +1,8 @@
+import {
+  appendSnapshot,
+  buildHistoryKey,
+  isHistoryKey,
+} from '../cache/append-snapshot';
 import { FRESH_TTL_MS, writeCache } from '../cache/cache';
 import { parseCacheKey } from '../cache/parse-cache-key';
 import type { CacheMetadata } from '../cache/types';
@@ -52,6 +57,10 @@ export async function runScheduledRefresh(
     });
 
     for (const key of listResult.keys) {
+      if (isHistoryKey(key.name)) {
+        continue;
+      }
+
       keysScanned++;
 
       if (!key.metadata) {
@@ -96,9 +105,10 @@ export async function runScheduledRefresh(
     cursor = listResult.list_complete ? undefined : listResult.cursor;
   } while (cursor);
 
-  // Evict inactive entries first
+  // Evict inactive entries and their history
   for (const key of inactiveKeys) {
     await kv.delete(key);
+    await kv.delete(buildHistoryKey(key));
   }
 
   // Sort: partial entries first, then oldest first
@@ -135,6 +145,7 @@ export async function runScheduledRefresh(
       // the eviction clock — only real user requests should extend it
       entry.lastAccessedAt = staleEntry.lastAccessedAt;
       await writeCache(kv, staleEntry.key, entry);
+      await appendSnapshot(kv, staleEntry.key, entry, now);
       refreshed++;
     } catch (error) {
       if (isRateLimitError(error) || isSecondaryRateLimitError(error)) {

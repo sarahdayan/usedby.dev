@@ -20,14 +20,15 @@ export const phpStrategy: EcosystemStrategy = {
         const deps = parsed[key];
 
         if (deps != null && typeof deps === 'object' && packageName in deps) {
-          return true;
+          const version = (deps as Record<string, string>)[packageName];
+          return { found: true, version };
         }
       }
     } catch {
       // Malformed JSON — treat as not a dependency
     }
 
-    return false;
+    return { found: false };
   },
 
   async resolveGitHubRepo(packageName: string) {

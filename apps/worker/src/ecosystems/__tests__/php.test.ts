@@ -25,46 +25,52 @@ describe('phpStrategy', () => {
   });
 
   describe('isDependency', () => {
-    it('returns true when package is in require', () => {
+    it('returns found with version when package is in require', () => {
       const manifest = JSON.stringify({
         require: { 'laravel/framework': '^10.0' },
       });
 
-      expect(phpStrategy.isDependency(manifest, 'laravel/framework')).toBe(
-        true
-      );
+      expect(phpStrategy.isDependency(manifest, 'laravel/framework')).toEqual({
+        found: true,
+        version: '^10.0',
+      });
     });
 
-    it('returns true when package is in require-dev', () => {
+    it('returns found with version when package is in require-dev', () => {
       const manifest = JSON.stringify({
         'require-dev': { 'phpunit/phpunit': '^10.0' },
       });
 
-      expect(phpStrategy.isDependency(manifest, 'phpunit/phpunit')).toBe(true);
+      expect(phpStrategy.isDependency(manifest, 'phpunit/phpunit')).toEqual({
+        found: true,
+        version: '^10.0',
+      });
     });
 
-    it('returns false when package is not present', () => {
+    it('returns not found when package is not present', () => {
       const manifest = JSON.stringify({
         require: { 'laravel/framework': '^10.0' },
       });
 
-      expect(phpStrategy.isDependency(manifest, 'symfony/console')).toBe(false);
+      expect(phpStrategy.isDependency(manifest, 'symfony/console')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for partial name match', () => {
+    it('returns not found for partial name match', () => {
       const manifest = JSON.stringify({
         require: { 'laravel/framework-extra': '^1.0' },
       });
 
-      expect(phpStrategy.isDependency(manifest, 'laravel/framework')).toBe(
-        false
-      );
+      expect(phpStrategy.isDependency(manifest, 'laravel/framework')).toEqual({
+        found: false,
+      });
     });
 
-    it('returns false for malformed JSON', () => {
-      expect(phpStrategy.isDependency('not json{', 'laravel/framework')).toBe(
-        false
-      );
+    it('returns not found for malformed JSON', () => {
+      expect(
+        phpStrategy.isDependency('not json{', 'laravel/framework')
+      ).toEqual({ found: false });
     });
   });
 

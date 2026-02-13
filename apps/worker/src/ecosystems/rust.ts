@@ -11,9 +11,36 @@ export const rustStrategy: EcosystemStrategy = {
 
   isDependency(manifestContent: string, packageName: string) {
     const escaped = escapeRegex(packageName);
-    const pattern = new RegExp(`^\\s*${escaped}\\s*[=.]`, 'm');
 
-    return pattern.test(manifestContent);
+    // Simple: serde = "1.0"
+    const simplePattern = new RegExp(`^\\s*${escaped}\\s*=\\s*"([^"]*)"`, 'm');
+    const simpleMatch = manifestContent.match(simplePattern);
+    if (simpleMatch) {
+      return { found: true, version: simpleMatch[1] };
+    }
+
+    // Inline table: serde = { version = "1.0", ... }
+    const tablePattern = new RegExp(
+      `^\\s*${escaped}\\s*=\\s*\\{[^}]*version\\s*=\\s*"([^"]*)"`,
+      'm'
+    );
+    const tableMatch = manifestContent.match(tablePattern);
+    if (tableMatch) {
+      return { found: true, version: tableMatch[1] };
+    }
+
+    // Dotted key: serde.version = "1.0"
+    const dottedPattern = new RegExp(`^\\s*${escaped}\\.`, 'm');
+    if (dottedPattern.test(manifestContent)) {
+      const dottedVersionPattern = new RegExp(
+        `^\\s*${escaped}\\.version\\s*=\\s*"([^"]*)"`,
+        'm'
+      );
+      const dottedMatch = manifestContent.match(dottedVersionPattern);
+      return { found: true, version: dottedMatch?.[1] };
+    }
+
+    return { found: false };
   },
 
   async resolveGitHubRepo(packageName: string) {
