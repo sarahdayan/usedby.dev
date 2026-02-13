@@ -15,14 +15,6 @@ interface PageProps {
   params: Promise<{ registry: string; package: string[] }>;
 }
 
-function findEcosystem(id: string) {
-  return ECOSYSTEMS.find((e) => e.id === id);
-}
-
-function formatCount(n: number): string {
-  return new Intl.NumberFormat('en-US').format(n);
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -66,6 +58,8 @@ export default async function PackagePage({ params }: PageProps) {
     notFound();
   }
 
+  const dependentCount = Math.max(data.dependentCount, data.repos.length);
+
   return (
     <main className="min-h-screen">
       <header className="mx-auto max-w-5xl px-6 pt-12 pb-8">
@@ -85,8 +79,8 @@ export default async function PackagePage({ params }: PageProps) {
           <Badge variant="secondary">{ecosystem.label}</Badge>
         </div>
         <p className="mt-2 text-lg text-muted-foreground">
-          {formatCount(data.dependentCount)} dependent
-          {data.dependentCount !== 1 ? 's' : ''}
+          {formatCount(dependentCount)} dependent
+          {dependentCount !== 1 ? 's' : ''}
         </p>
       </header>
 
@@ -98,4 +92,12 @@ export default async function PackagePage({ params }: PageProps) {
       <Footer />
     </main>
   );
+}
+
+function findEcosystem(id: string) {
+  return ECOSYSTEMS.find((ecosystem) => ecosystem.id === id);
+}
+
+function formatCount(n: number): string {
+  return new Intl.NumberFormat('en-US').format(n);
 }

@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 
 import { ToggleGroup } from '@/components/toggle-group';
 import { API_BASE } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 type Style = 'mosaic' | 'detailed';
 
@@ -36,8 +37,8 @@ export function MosaicImage({ platform, packageName }: MosaicImageProps) {
             { label: 'Detailed', value: 'detailed' as Style },
           ]}
           value={style}
-          onChange={(v) => {
-            setStyle(v);
+          onChange={(value) => {
+            setStyle(value);
             setImageLoaded(false);
           }}
         />
@@ -53,7 +54,10 @@ export function MosaicImage({ platform, packageName }: MosaicImageProps) {
           key={url}
           src={url}
           alt={`Projects using ${packageName}`}
-          className={`w-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          className={cn(
+            'w-full transition-opacity duration-500',
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          )}
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageLoaded(true)}
         />

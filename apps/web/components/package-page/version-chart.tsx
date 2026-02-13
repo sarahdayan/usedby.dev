@@ -9,6 +9,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
 
 interface VersionChartProps {
   versionDistribution: Record<string, number>;
@@ -16,41 +17,12 @@ interface VersionChartProps {
 
 const MAX_VERSIONS = 10;
 
-const chartConfig = {
+const CHART_CONFIG = {
   count: {
     label: 'Dependents',
     color: 'hsl(var(--chart-2))',
   },
 } satisfies ChartConfig;
-
-function getMajorVersion(version: string): string {
-  const match = version.match(/(\d+)/);
-
-  return match?.[1] ?? version;
-}
-
-function buildChartData(
-  entries: [string, number][]
-): { version: string; count: number }[] {
-  if (entries.length === 0) {
-    return [];
-  }
-
-  const sorted = entries.sort(([, a], [, b]) => b - a);
-
-  if (sorted.length <= MAX_VERSIONS) {
-    return sorted.map(([version, count]) => ({ version, count }));
-  }
-
-  const top = sorted.slice(0, MAX_VERSIONS);
-  const rest = sorted.slice(MAX_VERSIONS);
-  const otherCount = rest.reduce((sum, [, count]) => sum + count, 0);
-
-  return [
-    ...top.map(([version, count]) => ({ version, count })),
-    { version: 'Other', count: otherCount },
-  ];
-}
 
 export function VersionChart({ versionDistribution }: VersionChartProps) {
   const [selectedMajor, setSelectedMajor] = useState<string | null>(null);
@@ -60,11 +32,12 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
 
     for (const [version, count] of Object.entries(versionDistribution)) {
       const major = getMajorVersion(version);
+
       groups.set(major, (groups.get(major) ?? 0) + count);
     }
 
-    return buildChartData(
-      [...groups.entries()].map(([m, c]) => [`v${m}.x`, c])
+    return getChartData(
+      [...groups.entries()].map(([major, count]) => [`v${major}.x`, count])
     );
   }, [versionDistribution]);
 
@@ -77,7 +50,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
       ([version]) => getMajorVersion(version) === selectedMajor
     );
 
-    return buildChartData(entries);
+    return getChartData(entries);
   }, [versionDistribution, selectedMajor]);
 
   const data = selectedMajor ? drillDownData : majorData;
@@ -90,7 +63,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
         </h2>
         <div className="mt-4 rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">
-            Version data is being collected and will appear on the next refresh
+            Version data is being collected and will appear on the next refresh.
           </p>
         </div>
       </section>
@@ -107,11 +80,12 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
           <button
             type="button"
             onClick={() => setSelectedMajor(null)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+            className={cn(
+              'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
               selectedMajor === null
                 ? 'bg-secondary text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
-            }`}
+            )}
           >
             All
           </button>
@@ -122,11 +96,12 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
               onClick={() =>
                 setSelectedMajor(version.replace(/^v/, '').replace(/\.x$/, ''))
               }
-              className={`rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all ${
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all',
                 selectedMajor === version.replace(/^v/, '').replace(/\.x$/, '')
                   ? 'bg-secondary text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
+              )}
             >
               {version}
             </button>
@@ -135,7 +110,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
       )}
       <div className="mt-4 rounded-xl border border-border bg-card p-6">
         <ChartContainer
-          config={chartConfig}
+          config={CHART_CONFIG}
           className="aspect-auto h-[var(--chart-height)] w-full"
           style={
             {
@@ -178,4 +153,31 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
       </div>
     </section>
   );
+}
+
+function getMajorVersion(version: string): string {
+  const match = version.match(/(\d+)/);
+
+  return match?.[1] ?? version;
+}
+
+function getChartData(entries: [string, number][]) {
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const sorted = entries.sort(([, a], [, b]) => b - a);
+
+  if (sorted.length <= MAX_VERSIONS) {
+    return sorted.map(([version, count]) => ({ version, count }));
+  }
+
+  const top = sorted.slice(0, MAX_VERSIONS);
+  const rest = sorted.slice(MAX_VERSIONS);
+  const otherCount = rest.reduce((sum, [, count]) => sum + count, 0);
+
+  return [
+    ...top.map(([version, count]) => ({ version, count })),
+    { version: 'Other', count: otherCount },
+  ];
 }

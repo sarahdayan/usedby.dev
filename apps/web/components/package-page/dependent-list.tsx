@@ -15,45 +15,12 @@ interface DependentListProps {
 
 const PAGE_SIZE = 10;
 
-const sortOptions: { label: string; value: SortKey }[] = [
+const SORT_OPTIONS: { label: string; value: SortKey }[] = [
   { label: 'Score', value: 'score' },
   { label: 'Stars', value: 'stars' },
   { label: 'Activity', value: 'activity' },
   { label: 'Name', value: 'name' },
 ];
-
-function formatStars(count: number): string {
-  if (count >= 10_000) {
-    return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
-  }
-
-  return new Intl.NumberFormat('en-US').format(count);
-}
-
-function formatRelativeTime(dateString: string): string {
-  try {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-  } catch {
-    return '\u2014';
-  }
-}
-
-function sortRepos(repos: PackageRepo[], key: SortKey): PackageRepo[] {
-  return [...repos].sort((a, b) => {
-    switch (key) {
-      case 'score':
-        return b.score - a.score;
-      case 'stars':
-        return b.stars - a.stars;
-      case 'activity':
-        return new Date(b.lastPush).getTime() - new Date(a.lastPush).getTime();
-      case 'name':
-        return a.fullName.localeCompare(b.fullName);
-      default:
-        return 0;
-    }
-  });
-}
 
 export function DependentList({ repos }: DependentListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('score');
@@ -85,16 +52,15 @@ export function DependentList({ repos }: DependentListProps) {
     currentPage * PAGE_SIZE
   );
 
-  // Reset to page 1 when search or sort changes
-  const handleSearchChange = (value: string) => {
+  function onSearchChange(value: string) {
     setSearch(value);
     setPage(1);
-  };
+  }
 
-  const handleSortChange = (key: SortKey) => {
+  function onSortChange(key: SortKey) {
     setSortKey(key);
     setPage(1);
-  };
+  }
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-12">
@@ -103,15 +69,15 @@ export function DependentList({ repos }: DependentListProps) {
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           type="search"
-          placeholder="Filter dependents..."
+          placeholder="Filter dependents…"
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(event) => onSearchChange(event.target.value)}
           className="h-9 w-full bg-card sm:max-w-xs"
         />
         <ToggleGroup
-          options={sortOptions}
+          options={SORT_OPTIONS}
           value={sortKey}
-          onChange={handleSortChange}
+          onChange={onSortChange}
         />
       </div>
 
@@ -121,7 +87,6 @@ export function DependentList({ repos }: DependentListProps) {
         </p>
       ) : (
         <>
-          {/* Desktop table */}
           <div className="mt-4 hidden overflow-hidden rounded-xl border border-border sm:block">
             <table className="w-full text-sm">
               <thead>
@@ -171,7 +136,6 @@ export function DependentList({ repos }: DependentListProps) {
             </table>
           </div>
 
-          {/* Mobile card list */}
           <div className="mt-4 flex flex-col gap-3 sm:hidden">
             {paginated.map((repo) => (
               <div
@@ -220,7 +184,6 @@ export function DependentList({ repos }: DependentListProps) {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
@@ -231,7 +194,7 @@ export function DependentList({ repos }: DependentListProps) {
               <div className="flex gap-1">
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage((page) => Math.max(1, page - 1))}
                   disabled={currentPage <= 1}
                   className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
                 >
@@ -239,7 +202,9 @@ export function DependentList({ repos }: DependentListProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setPage((page) => Math.min(totalPages, page + 1))
+                  }
                   disabled={currentPage >= totalPages}
                   className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
                 >
@@ -252,4 +217,37 @@ export function DependentList({ repos }: DependentListProps) {
       )}
     </section>
   );
+}
+
+function formatStars(count: number): string {
+  if (count >= 10_000) {
+    return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+
+  return new Intl.NumberFormat('en-US').format(count);
+}
+
+function formatRelativeTime(dateString: string): string {
+  try {
+    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+  } catch {
+    return '\u2014';
+  }
+}
+
+function sortRepos(repos: PackageRepo[], key: SortKey): PackageRepo[] {
+  return [...repos].sort((a, b) => {
+    switch (key) {
+      case 'score':
+        return b.score - a.score;
+      case 'stars':
+        return b.stars - a.stars;
+      case 'activity':
+        return new Date(b.lastPush).getTime() - new Date(a.lastPush).getTime();
+      case 'name':
+        return a.fullName.localeCompare(b.fullName);
+      default:
+        return 0;
+    }
+  });
 }
