@@ -1059,6 +1059,7 @@ function createScoredRepo(
 function createEnv(overrides?: { DEV?: string }) {
   return {
     DEPENDENTS_CACHE: {} as KVNamespace,
+    PIPELINE_QUEUE: { send: vi.fn() } as unknown as Queue,
     GITHUB_TOKEN: 'fake-token',
     ...overrides,
   };

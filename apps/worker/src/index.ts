@@ -25,6 +25,7 @@ import type { Theme } from './svg/theme';
 
 interface Env {
   DEPENDENTS_CACHE: KVNamespace;
+  PIPELINE_QUEUE: Queue;
   GITHUB_TOKEN: string;
   DEV?: string;
 }
