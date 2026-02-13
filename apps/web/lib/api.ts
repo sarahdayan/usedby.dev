@@ -21,17 +21,26 @@ export interface PackageData {
   versionDistribution: Record<string, number>;
 }
 
+export type FetchResult =
+  | { status: 'ready'; data: PackageData }
+  | { status: 'pending' }
+  | { status: 'not-found' };
+
 export async function fetchPackageData(
   platform: string,
   packageName: string
-): Promise<PackageData | null> {
+): Promise<FetchResult> {
   const res = await fetch(`${API_BASE}/${platform}/${packageName}/data.json`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 10 },
   });
 
-  if (!res.ok) {
-    return null;
+  if (res.status === 202) {
+    return { status: 'pending' };
   }
 
-  return res.json();
+  if (!res.ok) {
+    return { status: 'not-found' };
+  }
+
+  return { status: 'ready', data: await res.json() };
 }
