@@ -34,11 +34,16 @@ vi.mock('../scheduled/run-scheduled-refresh', () => ({
   runScheduledRefresh: vi.fn(),
 }));
 
+vi.mock('../queue/handle-pipeline-message', () => ({
+  handlePipelineMessage: vi.fn(),
+}));
+
 import {
   getDependentCountForBadge,
   getDependents,
 } from '../cache/get-dependents';
 import { PROD_LIMITS } from '../github/pipeline-limits';
+import { handlePipelineMessage } from '../queue/handle-pipeline-message';
 import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
 import { renderMessage } from '../svg/render-message';
@@ -99,6 +104,50 @@ describe('worker', () => {
         '[scheduled] Refresh failed:',
         expect.any(Error)
       );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('queue', () => {
+    it('acks message on success', async () => {
+      vi.mocked(handlePipelineMessage).mockResolvedValue();
+
+      const message = createQueueMessage({
+        platform: 'npm',
+        packageName: 'react',
+        enqueuedAt: new Date().toISOString(),
+      });
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(handlePipelineMessage).toHaveBeenCalledWith(
+        message.body,
+        expect.anything()
+      );
+      expect(message.ack).toHaveBeenCalled();
+      expect(message.retry).not.toHaveBeenCalled();
+    });
+
+    it('retries message on failure', async () => {
+      vi.mocked(handlePipelineMessage).mockRejectedValue(
+        new Error('Pipeline failed')
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const message = createQueueMessage({
+        platform: 'npm',
+        packageName: 'react',
+        enqueuedAt: new Date().toISOString(),
+      });
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(message.ack).not.toHaveBeenCalled();
+      expect(message.retry).toHaveBeenCalledWith({ delaySeconds: 30 });
       consoleSpy.mockRestore();
     });
   });
@@ -1076,4 +1125,27 @@ function createRequest(path: string, method = 'GET') {
   return new Request(`https://usedby.dev${path}`, {
     method,
   }) as unknown as Request<unknown, IncomingRequestCfProperties>;
+}
+
+function createQueueMessage(body: {
+  platform: string;
+  packageName: string;
+  enqueuedAt: string;
+}) {
+  return {
+    body,
+    id: 'msg-1',
+    timestamp: new Date(),
+    ack: vi.fn(),
+    retry: vi.fn(),
+  } as unknown as Message;
+}
+
+function createBatch(messages: Message[]) {
+  return {
+    messages,
+    queue: 'usedby-pipeline',
+    ackAll: vi.fn(),
+    retryAll: vi.fn(),
+  } as unknown as MessageBatch;
 }
