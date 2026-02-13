@@ -6,6 +6,7 @@ import { Loader2Icon } from 'lucide-react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLoadingMessage } from '@/hooks/use-loading-message';
+import { useReadyNotification } from '@/hooks/use-ready-notification';
 import { API_BASE } from '@/lib/api';
 
 interface PendingPageProps {
@@ -36,12 +37,18 @@ async function fetcher(url: string) {
 export function PendingPage({ registry, packageName }: PendingPageProps) {
   const router = useRouter();
   const message = useLoadingMessage();
+  const notify = useReadyNotification();
 
   useSWR(`${API_BASE}/${registry}/${packageName}/data.json`, fetcher, {
     refreshInterval: 3_000,
+    refreshWhenHidden: true,
     onSuccess(data) {
       if (data) {
-        router.refresh();
+        const notified = notify(() => router.refresh());
+
+        if (!notified) {
+          router.refresh();
+        }
       }
     },
     onErrorRetry(error, _key, _config, revalidate, { retryCount }) {
