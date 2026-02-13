@@ -19,7 +19,7 @@ export default function Loading() {
           <Skeleton className="h-8 w-48 sm:h-9" />
           <Skeleton className="h-6 w-16 rounded-full" />
         </div>
-        <Skeleton className="mt-2 h-6 w-40" />
+        <Skeleton className="mt-2 h-7 w-40" />
       </header>
 
       {/* Dependents skeleton */}
