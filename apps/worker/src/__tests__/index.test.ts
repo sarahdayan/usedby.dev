@@ -34,11 +34,16 @@ vi.mock('../scheduled/run-scheduled-refresh', () => ({
   runScheduledRefresh: vi.fn(),
 }));
 
+vi.mock('../queue/handle-pipeline-message', () => ({
+  handlePipelineMessage: vi.fn(),
+}));
+
 import {
   getDependentCountForBadge,
   getDependents,
 } from '../cache/get-dependents';
 import { PROD_LIMITS } from '../github/pipeline-limits';
+import { handlePipelineMessage } from '../queue/handle-pipeline-message';
 import { runScheduledRefresh } from '../scheduled/run-scheduled-refresh';
 import { fetchAvatars } from '../svg/fetch-avatars';
 import { renderMessage } from '../svg/render-message';
@@ -99,6 +104,67 @@ describe('worker', () => {
         '[scheduled] Refresh failed:',
         expect.any(Error)
       );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('queue', () => {
+    it('acks message on success', async () => {
+      vi.mocked(handlePipelineMessage).mockResolvedValue();
+
+      const message = createQueueMessage({
+        platform: 'npm',
+        packageName: 'react',
+        enqueuedAt: new Date().toISOString(),
+      });
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(handlePipelineMessage).toHaveBeenCalledWith(
+        message.body,
+        expect.anything()
+      );
+      expect(message.ack).toHaveBeenCalled();
+      expect(message.retry).not.toHaveBeenCalled();
+    });
+
+    it('acks and skips invalid message body', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const message = createQueueMessage({ bad: 'data' } as any);
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(handlePipelineMessage).not.toHaveBeenCalled();
+      expect(message.ack).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid message body'),
+        expect.anything()
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it('retries message on failure', async () => {
+      vi.mocked(handlePipelineMessage).mockRejectedValue(
+        new Error('Pipeline failed')
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const message = createQueueMessage({
+        platform: 'npm',
+        packageName: 'react',
+        enqueuedAt: new Date().toISOString(),
+      });
+      const batch = createBatch([message]);
+
+      await worker.queue!(batch, createEnv());
+
+      expect(message.ack).not.toHaveBeenCalled();
+      expect(message.retry).toHaveBeenCalledWith({ delaySeconds: 30 });
       consoleSpy.mockRestore();
     });
   });
@@ -900,6 +966,52 @@ describe('worker', () => {
     });
   });
 
+  describe('pending state', () => {
+    it('returns generating SVG with short cache on pending image request', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+        pending: true,
+      });
+      vi.mocked(renderMessage).mockReturnValue('<svg>Generating…</svg>');
+
+      const response = await worker.fetch(
+        createRequest('/npm/react'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
+      expect(response.headers.get('Cache-Control')).toBe(
+        'public, max-age=10, s-maxage=10'
+      );
+      expect(await response.text()).toContain('Generating');
+      expect(renderMessage).toHaveBeenCalledWith('Generating\u2026', undefined);
+      expect(fetchAvatars).not.toHaveBeenCalled();
+      expect(mockCache.put).not.toHaveBeenCalled();
+    });
+
+    it('passes theme to renderMessage on pending', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+        pending: true,
+      });
+      vi.mocked(renderMessage).mockReturnValue('<svg>Generating…</svg>');
+
+      await worker.fetch(
+        createRequest('/npm/react?theme=dark'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(renderMessage).toHaveBeenCalledWith('Generating\u2026', 'dark');
+    });
+  });
+
   describe('edge cache', () => {
     it('returns cached response on cache hit', async () => {
       const cachedResponse = new Response('<svg>cached</svg>', {
@@ -1059,6 +1171,7 @@ function createScoredRepo(
 function createEnv(overrides?: { DEV?: string }) {
   return {
     DEPENDENTS_CACHE: {} as KVNamespace,
+    PIPELINE_QUEUE: { send: vi.fn() } as unknown as Queue,
     GITHUB_TOKEN: 'fake-token',
     ...overrides,
   };
@@ -1075,4 +1188,27 @@ function createRequest(path: string, method = 'GET') {
   return new Request(`https://usedby.dev${path}`, {
     method,
   }) as unknown as Request<unknown, IncomingRequestCfProperties>;
+}
+
+function createQueueMessage(body: {
+  platform: string;
+  packageName: string;
+  enqueuedAt: string;
+}) {
+  return {
+    body,
+    id: 'msg-1',
+    timestamp: new Date(),
+    ack: vi.fn(),
+    retry: vi.fn(),
+  } as unknown as Message;
+}
+
+function createBatch(messages: Message[]) {
+  return {
+    messages,
+    queue: 'usedby-pipeline',
+    ackAll: vi.fn(),
+    retryAll: vi.fn(),
+  } as unknown as MessageBatch;
 }

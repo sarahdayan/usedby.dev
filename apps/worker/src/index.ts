@@ -12,6 +12,8 @@ import { rubyStrategy } from './ecosystems/ruby';
 import { rustStrategy } from './ecosystems/rust';
 import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
+import { handlePipelineMessage } from './queue/handle-pipeline-message';
+import { isPipelineMessage } from './queue/types';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
 import {
@@ -25,6 +27,7 @@ import type { Theme } from './svg/theme';
 
 interface Env {
   DEPENDENTS_CACHE: KVNamespace;
+  PIPELINE_QUEUE: Queue;
   GITHUB_TOKEN: string;
   DEV?: string;
 }
@@ -37,6 +40,24 @@ registerStrategy(rustStrategy);
 registerStrategy(goStrategy);
 
 export default {
+  async queue(batch, env) {
+    for (const message of batch.messages) {
+      if (!isPipelineMessage(message.body)) {
+        console.warn('[queue] Invalid message body, skipping:', message.body);
+        message.ack();
+        continue;
+      }
+
+      try {
+        await handlePipelineMessage(message.body, env);
+        message.ack();
+      } catch (error) {
+        console.error('[queue] Failed to process message:', error);
+        message.retry({ delaySeconds: 30 });
+      }
+    }
+  },
+
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       runScheduledRefresh(env)
@@ -192,7 +213,7 @@ export default {
     logger.log('request', `GET /${platform}/${packageName}`);
 
     try {
-      const { repos, dependentCount } = await getDependents({
+      const { repos, dependentCount, pending } = await getDependents({
         strategy,
         packageName,
         kv: env.DEPENDENTS_CACHE,
@@ -200,7 +221,17 @@ export default {
         waitUntil: ctx.waitUntil.bind(ctx),
         logger,
         limits,
+        queue: env.PIPELINE_QUEUE,
       });
+
+      if (pending) {
+        return new Response(renderMessage('Generating\u2026', theme), {
+          headers: {
+            'Content-Type': 'image/svg+xml',
+            'Cache-Control': 'public, max-age=10, s-maxage=10',
+          },
+        });
+      }
 
       const repoList = repos ?? [];
       const sorted =
@@ -336,7 +367,7 @@ async function handleData(
   }
 
   try {
-    const { repos, dependentCount } = await getDependents({
+    const { repos, dependentCount, pending } = await getDependents({
       strategy,
       packageName,
       kv: env.DEPENDENTS_CACHE,
@@ -345,7 +376,20 @@ async function handleData(
       logger,
       limits,
       existenceCheck: () => checkPackageExists(strategy, packageName),
+      queue: env.PIPELINE_QUEUE,
     });
+
+    if (pending) {
+      return jsonResponse(
+        {
+          status: 'pending',
+          package: packageName,
+          platform: strategy.platform,
+        },
+        202,
+        { 'Cache-Control': 'no-store' }
+      );
+    }
 
     if (repos === null) {
       return jsonResponse({ error: 'Package not found' }, 404);

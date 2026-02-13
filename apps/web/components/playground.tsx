@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useLoadingMessage } from '@/hooks/use-loading-message';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -445,37 +446,12 @@ export function Playground() {
   );
 }
 
-const LOADING_MESSAGES = [
-  'Searching GitHub for dependents\u2026',
-  'This can take a while on a cold start\u2026',
-  'Checking manifest files\u2026',
-  'Enriching repository metadata\u2026',
-  'Politely asking GitHub for more data\u2026',
-  'Filtering out forks and noise\u2026',
-  'Scoring and ranking results\u2026',
-  'Fetching project avatars\u2026',
-  'Still going, not stuck\u2026',
-  'Rendering the image\u2026',
-  'GitHub rate limits are keeping us honest',
-  'Wrapping things up\u2026',
-  'Seriously, almost there\u2026',
-  'Worth the wait, I promise\u2026',
-];
-
 function LoadingMessage() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(
-      () => setIndex((i) => (i + 1) % LOADING_MESSAGES.length),
-      2000
-    );
-    return () => clearInterval(interval);
-  }, []);
+  const message = useLoadingMessage();
 
   return (
-    <p key={index} className="animate-fade-in text-xs text-muted-foreground">
-      {LOADING_MESSAGES[index]}
+    <p key={message} className="animate-fade-in text-xs text-muted-foreground">
+      {message}
     </p>
   );
 }

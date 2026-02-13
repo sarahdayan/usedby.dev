@@ -18,6 +18,11 @@ export async function readCache(
   }
 
   const entry: CacheEntry = JSON.parse(raw);
+
+  if (entry.pending) {
+    return { status: 'miss', entry: null };
+  }
+
   const age = now.getTime() - new Date(entry.fetchedAt).getTime();
 
   if (age < FRESH_TTL_MS) {
@@ -33,6 +38,7 @@ function buildMetadata(entry: CacheEntry): CacheMetadata {
     lastAccessedAt: entry.lastAccessedAt,
     partial: entry.partial,
     ...(entry.countOnly && { countOnly: true }),
+    ...(entry.pending && { pending: true }),
   };
 }
 

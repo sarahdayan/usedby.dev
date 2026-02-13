@@ -71,6 +71,15 @@ describe('readCache', () => {
 
     expect(result.status).toBe('hit');
   });
+
+  it('returns miss for pending entries', async () => {
+    const entry = createEntry({ pending: true });
+    const kv = createMockKV({ 'npm:react': JSON.stringify(entry) });
+
+    const result = await readCache(kv, 'npm:react', NOW);
+
+    expect(result).toEqual({ status: 'miss', entry: null });
+  });
 });
 
 describe('writeCache', () => {
@@ -118,6 +127,28 @@ describe('writeCache', () => {
         partial: entry.partial,
       },
     });
+  });
+
+  it('includes pending in metadata when entry is pending', async () => {
+    const kv = createMockKV();
+    const entry = createEntry({ pending: true, repos: [] });
+
+    await writeCache(kv, 'npm:react', entry);
+
+    expect(kv.put).toHaveBeenCalledWith('npm:react', JSON.stringify(entry), {
+      metadata: expect.objectContaining({ pending: true }),
+    });
+  });
+
+  it('omits pending from metadata when entry is not pending', async () => {
+    const kv = createMockKV();
+    const entry = createEntry();
+
+    await writeCache(kv, 'npm:react', entry);
+
+    const metadata = (kv.put as ReturnType<typeof vi.fn>).mock.calls[0]![2]
+      .metadata;
+    expect(metadata).not.toHaveProperty('pending');
   });
 });
 

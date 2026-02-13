@@ -16,4 +16,19 @@
   "triggers": {
     "crons": ["0 4 * * *"],
   },
+  "queues": {
+    "producers": [
+      {
+        "binding": "PIPELINE_QUEUE",
+        "queue": "usedby-pipeline",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "usedby-pipeline",
+        "max_batch_size": 1,
+        "max_retries": 2,
+      },
+    ],
+  },
 }

@@ -25,6 +25,8 @@ export interface GetDependentsOptions {
   limits?: PipelineLimits;
   /** Optional guard called on cache miss before running the pipeline. Return false to abort. */
   existenceCheck?: () => Promise<boolean>;
+  /** When provided, cache misses enqueue a pipeline job instead of running synchronously. */
+  queue?: Queue;
 }
 
 export interface GetDependentsResult {
@@ -32,6 +34,7 @@ export interface GetDependentsResult {
   fromCache: boolean;
   refreshing: boolean;
   dependentCount?: number;
+  pending?: boolean;
 }
 
 export async function getDependents(
@@ -110,6 +113,42 @@ export async function getDependents(
       logger?.log('cache', 'package does not exist, skipping pipeline');
       return { repos: null, fromCache: false, refreshing: false };
     }
+  }
+
+  if (options.queue) {
+    const lockKey = buildLockKey(key);
+    const existing = await kv.get(lockKey);
+
+    // KV doesn't support atomic check-and-set, so concurrent requests may
+    // both pass this check and enqueue duplicate messages. This is harmless:
+    // the consumer is idempotent (writes the same result to the same key).
+    //
+    // If the queue consumer fails permanently, the pending KV entry persists
+    // but self-heals: the lock expires after LOCK_TTL_SECONDS (5 min), so
+    // the next visitor will see a cache miss and re-enqueue.
+    if (existing === null) {
+      const pendingEntry: CacheEntry = {
+        repos: [],
+        fetchedAt: (now ?? new Date()).toISOString(),
+        lastAccessedAt: (now ?? new Date()).toISOString(),
+        partial: true,
+        pending: true,
+      };
+      await writeCache(kv, key, pendingEntry);
+      await kv.put(lockKey, '1', { expirationTtl: LOCK_TTL_SECONDS });
+      await options.queue.send({
+        platform: strategy.platform,
+        packageName,
+        enqueuedAt: (now ?? new Date()).toISOString(),
+      });
+    }
+
+    return {
+      repos: [],
+      fromCache: false,
+      refreshing: false,
+      pending: true,
+    };
   }
 
   const entry = await refreshDependents(
