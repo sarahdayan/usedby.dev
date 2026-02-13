@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Footer } from '@/components/footer';
 import { DependentList } from '@/components/package-page/dependent-list';
 import { EmbedSnippets } from '@/components/package-page/embed-snippets';
 import { PendingPage } from '@/components/package-page/pending-page';
@@ -62,7 +61,7 @@ export default async function PackagePage({ params }: PageProps) {
 
   if (result.status === 'pending') {
     return (
-      <main className="min-h-screen">
+      <>
         <header className="mx-auto max-w-5xl px-6 pt-12 pb-8">
           <nav className="mb-8">
             <Link
@@ -83,9 +82,7 @@ export default async function PackagePage({ params }: PageProps) {
         </header>
 
         <PendingPage registry={registry} packageName={packageName} />
-
-        <Footer />
-      </main>
+      </>
     );
   }
 
@@ -93,7 +90,7 @@ export default async function PackagePage({ params }: PageProps) {
   const dependentCount = Math.max(data.dependentCount, data.repos.length);
 
   return (
-    <main className="min-h-screen">
+    <>
       <header className="mx-auto max-w-5xl px-6 pt-12 pb-8">
         <nav className="mb-8">
           <Link
@@ -120,9 +117,7 @@ export default async function PackagePage({ params }: PageProps) {
       <VersionChart versionDistribution={data.versionDistribution} />
       <EmbedSnippets platform={registry} packageName={packageName} />
       <TrendsPlaceholder />
-
-      <Footer />
-    </main>
+    </>
   );
 }
 

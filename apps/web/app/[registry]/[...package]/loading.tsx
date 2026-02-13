@@ -1,10 +1,10 @@
-import { Skeleton } from '@/components/ui/skeleton';
-import { Footer } from '@/components/footer';
 import Link from 'next/link';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Loading() {
   return (
-    <main className="min-h-screen">
+    <>
       <header className="mx-auto max-w-5xl px-6 pt-12 pb-8">
         <nav className="mb-8">
           <Link
@@ -121,8 +121,6 @@ export default function Loading() {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </main>
+    </>
   );
 }

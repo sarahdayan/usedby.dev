@@ -2,7 +2,6 @@ import { Hero } from '@/components/hero';
 import { QuickStart } from '@/components/quick-start';
 import { Playground } from '@/components/playground';
 import { HostYourOwn } from '@/components/host-your-own';
-import { Footer } from '@/components/footer';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -22,7 +21,7 @@ const jsonLd = {
 
 export default function Page() {
   return (
-    <main className="min-h-screen">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -40,7 +39,6 @@ export default function Page() {
         <hr className="border-border" />
       </div>
       <HostYourOwn />
-      <Footer />
-    </main>
+    </>
   );
 }
