@@ -89,4 +89,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  html:has(:target) {
+    @apply scroll-smooth;
+  }
 }
