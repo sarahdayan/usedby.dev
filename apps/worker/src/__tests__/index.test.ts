@@ -949,6 +949,52 @@ describe('worker', () => {
     });
   });
 
+  describe('pending state', () => {
+    it('returns generating SVG with short cache on pending image request', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+        pending: true,
+      });
+      vi.mocked(renderMessage).mockReturnValue('<svg>Generating…</svg>');
+
+      const response = await worker.fetch(
+        createRequest('/npm/react'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
+      expect(response.headers.get('Cache-Control')).toBe(
+        'public, max-age=10, s-maxage=10'
+      );
+      expect(await response.text()).toContain('Generating');
+      expect(renderMessage).toHaveBeenCalledWith('Generating\u2026', undefined);
+      expect(fetchAvatars).not.toHaveBeenCalled();
+      expect(mockCache.put).not.toHaveBeenCalled();
+    });
+
+    it('passes theme to renderMessage on pending', async () => {
+      vi.mocked(getDependents).mockResolvedValue({
+        repos: [],
+        fromCache: false,
+        refreshing: false,
+        pending: true,
+      });
+      vi.mocked(renderMessage).mockReturnValue('<svg>Generating…</svg>');
+
+      await worker.fetch(
+        createRequest('/npm/react?theme=dark'),
+        createEnv(),
+        createCtx()
+      );
+
+      expect(renderMessage).toHaveBeenCalledWith('Generating\u2026', 'dark');
+    });
+  });
+
   describe('edge cache', () => {
     it('returns cached response on cache hit', async () => {
       const cachedResponse = new Response('<svg>cached</svg>', {

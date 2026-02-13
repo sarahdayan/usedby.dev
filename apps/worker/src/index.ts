@@ -207,7 +207,7 @@ export default {
     logger.log('request', `GET /${platform}/${packageName}`);
 
     try {
-      const { repos, dependentCount } = await getDependents({
+      const { repos, dependentCount, pending } = await getDependents({
         strategy,
         packageName,
         kv: env.DEPENDENTS_CACHE,
@@ -215,7 +215,17 @@ export default {
         waitUntil: ctx.waitUntil.bind(ctx),
         logger,
         limits,
+        queue: env.PIPELINE_QUEUE,
       });
+
+      if (pending) {
+        return new Response(renderMessage('Generating\u2026', theme), {
+          headers: {
+            'Content-Type': 'image/svg+xml',
+            'Cache-Control': 'public, max-age=10, s-maxage=10',
+          },
+        });
+      }
 
       const repoList = repos ?? [];
       const sorted =
@@ -351,7 +361,7 @@ async function handleData(
   }
 
   try {
-    const { repos, dependentCount } = await getDependents({
+    const { repos, dependentCount, pending } = await getDependents({
       strategy,
       packageName,
       kv: env.DEPENDENTS_CACHE,
@@ -360,7 +370,20 @@ async function handleData(
       logger,
       limits,
       existenceCheck: () => checkPackageExists(strategy, packageName),
+      queue: env.PIPELINE_QUEUE,
     });
+
+    if (pending) {
+      return jsonResponse(
+        {
+          status: 'pending',
+          package: packageName,
+          platform: strategy.platform,
+        },
+        202,
+        { 'Cache-Control': 'no-store' }
+      );
+    }
 
     if (repos === null) {
       return jsonResponse({ error: 'Package not found' }, 404);
