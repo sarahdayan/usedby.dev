@@ -1,27 +1,46 @@
 # `@usedby.dev/worker`
 
-Cloudflare Worker that serves the embeddable image endpoint and handles the data pipeline.
+Cloudflare Worker that powers the usedby.dev API: data pipeline, embeddable image, badge, and JSON endpoints.
 
 ## How it works
 
 ```mermaid
 flowchart TD
-    A["Incoming request<br/>GET /:platform/:package"] --> B{KV cache?}
-    B -- Fresh --> C[Serve cached SVG]
-    B -- Stale --> D[Serve stale SVG]
-    D -- background --> E[Refresh pipeline]
-    B -- Miss --> E
+    A["Incoming request"] --> B{Endpoint}
+    B -- "/:p/:pkg" --> IMG["Image endpoint"]
+    B -- "/:p/:pkg/data.json" --> DATA["Data endpoint"]
+    B -- "/:p/:pkg/shield.json" --> BADGE["Badge endpoint"]
 
-    E --> F["Search<br/>GitHub code search<br/>for package.json files"]
-    E --> F2["Resolve dependent count<br/>npm registry → GitHub<br/>dependents page"]
-    F --> G["Pre-filter<br/>Remove forks"]
-    G --> H["Cap at 500 repos"]
-    H --> I["Enrich + Verify<br/>GraphQL: fetch metadata<br/>+ package.json content.<br/>Confirm package is an<br/>actual dependency"]
-    I --> J["Filter & Score<br/>Remove archived,<br/>low-star repos.<br/>Rank by stars × recency"]
-    J --> K[Fetch avatars]
-    F2 --> L
-    K --> L["Render SVG<br/>mosaic/detailed +<br/>dependent count badge"]
-    L --> M[Write to KV cache]
+    IMG --> C{KV cache?}
+    DATA --> C
+    C -- Fresh --> D[Serve from cache]
+    C -- Stale --> E[Serve stale]
+    E -- background --> F[Refresh pipeline]
+    C -- Miss --> Q{Queue available?}
+    Q -- Yes --> ENQ["Enqueue job<br/>Return 202 pending"]
+    Q -- No --> F
+
+    BADGE --> B2{KV cache?}
+    B2 -- Fresh --> D
+    B2 -- Stale/Miss --> COR["Count-only refresh<br/>(lightweight)"]
+    COR --> KV
+
+    subgraph "Pipeline (sync or queue consumer)"
+        F --> S["Search<br/>GitHub code search<br/>for manifest files"]
+        F --> DC["Resolve dependent count<br/>npm registry → GitHub<br/>dependents page"]
+        S --> PF["Pre-filter<br/>Remove forks"]
+        PF --> CAP["Cap at 500 repos"]
+        CAP --> EN["Enrich + Verify<br/>GraphQL: metadata +<br/>manifest content.<br/>Confirm actual dependency"]
+        EN --> FS["Filter & Score<br/>Remove archived,<br/>low-star repos.<br/>Rank by stars × recency"]
+        FS --> KV["Write to KV cache"]
+        DC --> KV
+    end
+
+    subgraph "Scheduled (cron)"
+        CRON["Cron trigger"] --> SCAN["Scan KV keys"]
+        SCAN --> EVICT["Evict inactive<br/>(30+ days)"]
+        SCAN --> REFRESH["Re-queue stale entries<br/>(max 5 per run)"]
+    end
 ```
 
 ### Pipeline stages
@@ -32,85 +51,119 @@ flowchart TD
 4. **Cap** — Slices to 500 repos to stay within the enrichment budget (10 GraphQL batches of 50).
 5. **Enrich + Verify** — A single GraphQL query per batch fetches repo metadata (stars, archived status, last push) _and_ the matched `package.json` content via `object(expression: "HEAD:path")`. The file is parsed and verified: repos where the package is not listed in `dependencies`, `devDependencies`, `peerDependencies`, or `optionalDependencies` are discarded as false positives. This costs zero additional subrequests.
 6. **Filter & Score** — Removes archived repos and those with fewer than 5 stars. Remaining repos are ranked by `stars * recency_multiplier` (half-life decay over 1 year).
-7. **Fetch avatars** — Downloads avatar images for the top results.
-8. **Render** — Produces an SVG (mosaic or detailed) with a "Used by N repositories" pill badge when the dependent count is available, and writes it to KV cache.
+7. **Write to KV** — Stores repos, dependent count, version distribution, and metadata. Appends a daily snapshot for trending history.
 
-## Image endpoint
+### Queue consumer
+
+On a cache miss, the data endpoint enqueues a `PipelineMessage` to a Cloudflare Queue instead of running the pipeline synchronously. The queue consumer:
+
+1. Validates the message
+2. Runs the full pipeline
+3. Writes results to KV and appends a history snapshot
+4. Deletes the lock key
+
+Messages are retried after 30 seconds on failure. Duplicate enqueues are harmless — the consumer is idempotent.
+
+### Scheduled refresh
+
+A cron trigger scans all KV keys and:
+
+- **Evicts** entries not accessed in 30+ days
+- **Re-queues** stale entries (max 5 per run, oldest first)
+- Stops early if GitHub rate-limited
+
+## Endpoints
+
+### Data
+
+```
+GET /:platform/:package/data.json
+```
+
+Returns the full dependent data for a package as JSON. This is the primary endpoint consumed by the web app.
+
+| Status | Meaning                                         |
+| ------ | ----------------------------------------------- |
+| `200`  | Data ready                                      |
+| `202`  | Pending — pipeline is running in the background |
+| `404`  | Package not found                               |
+
+**Response (200):**
+
+```json
+{
+  "package": "dinero.js",
+  "platform": "npm",
+  "dependentCount": 97,
+  "fetchedAt": "2025-01-15T12:00:00.000Z",
+  "repos": [
+    {
+      "fullName": "org/repo",
+      "owner": "org",
+      "name": "repo",
+      "stars": 12000,
+      "lastPush": "2025-01-10T08:00:00.000Z",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/123",
+      "score": 11400,
+      "version": "2.0.0"
+    }
+  ],
+  "versionDistribution": {
+    "2.0.0": 42,
+    "1.9.0": 28
+  }
+}
+```
+
+### Image
 
 ```
 GET /:platform/:package
 ```
 
-Example: `GET /npm/dinero.js` returns an SVG image.
+Returns an embeddable SVG image. Example: `GET /npm/dinero.js`
 
-### Query parameters
+| Parameter | Type    | Default  | Description                                                       |
+| --------- | ------- | -------- | ----------------------------------------------------------------- |
+| `max`     | integer | `100`    | Number of dependents to display (1–100).                          |
+| `style`   | string  | `mosaic` | `mosaic` (avatar grid) or `detailed` (cards with name and stars). |
+| `sort`    | string  | `score`  | `score` (stars × recency) or `stars` (raw star count).            |
+| `theme`   | string  | `auto`   | `auto`, `light`, or `dark`.                                       |
 
-| Parameter | Type    | Default  | Description                                                                                                                                                     |
-| --------- | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max`     | integer | `100`    | Number of dependents to display (1–100). Higher values use more subrequests (each avatar = 1 fetch).                                                            |
-| `style`   | string  | `mosaic` | Rendering style. `mosaic` shows an avatar-only grid (10 columns, 70px avatars). `detailed` shows a 3-column card layout with avatar, repo name, and star count. |
-| `sort`    | string  | `score`  | Sort order. `score` ranks by `stars × recency_multiplier` (composite score). `stars` ranks by raw star count.                                                   |
-| `theme`   | string  | `auto`   | Color theme. `auto` adapts to the user's system preference via `prefers-color-scheme`. `light` and `dark` force a specific mode.                                |
-
-## Badge endpoint
+### Badge
 
 ```
 GET /:platform/:package/shield.json
 ```
 
-Returns a [Shields.io endpoint badge](https://shields.io/badges/endpoint-badge) JSON response with the number of dependents for a package.
-
-### Usage with Shields.io
+Returns a [Shields.io endpoint badge](https://shields.io/badges/endpoint-badge) JSON response.
 
 ```
-https://img.shields.io/endpoint?url=https://api.usedby.dev/{platform}/{package}/shield.json
+https://img.shields.io/endpoint?url=https://api.usedby.dev/npm/dinero.js/shield.json
 ```
 
-Example for `dinero.js` on npm:
-
-```markdown
-![Used by](https://img.shields.io/endpoint?url=https://api.usedby.dev/npm/dinero.js/shield.json)
-```
+Uses a lightweight count-only refresh on cache miss (no search or enrichment), so it's cheap and fast.
 
 ### Supported registries
 
-| Platform   | Example                                   |
-| ---------- | ----------------------------------------- |
-| `npm`      | `/npm/dinero.js/shield.json`              |
-| `rubygems` | `/rubygems/rails/shield.json`             |
-| `pypi`     | `/pypi/django/shield.json`                |
-| `cargo`    | `/cargo/serde/shield.json`                |
-| `composer` | `/composer/laravel/framework/shield.json` |
-| `go`       | `/go/gorilla/mux/shield.json`             |
+| Platform   | Example                       |
+| ---------- | ----------------------------- |
+| `npm`      | `/npm/dinero.js`              |
+| `rubygems` | `/rubygems/rails`             |
+| `pypi`     | `/pypi/django`                |
+| `cargo`    | `/cargo/serde`                |
+| `composer` | `/composer/laravel/framework` |
+| `go`       | `/go/gorilla/mux`             |
 
-### Response format
+## Caching
 
-```json
-{
-  "schemaVersion": 1,
-  "label": "used by",
-  "message": "1.2K+ projects",
-  "color": "brightgreen"
-}
-```
+All endpoints use a stale-while-revalidate strategy:
 
-| Field           | Type    | Description                                                                                          |
-| --------------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| `schemaVersion` | integer | Always `1` (Shields.io schema version).                                                              |
-| `label`         | string  | Always `"used by"`.                                                                                  |
-| `message`       | string  | Formatted count (e.g. `"42 projects"`, `"1.2K+ projects"`). `"unavailable"` or `"error"` on failure. |
-| `color`         | string  | `"brightgreen"` when count > 0, `"lightgrey"` when 0 or unavailable, `"red"` on error.               |
-| `isError`       | boolean | Present and `true` only on error responses.                                                          |
+- **Fresh**: 24 hours (12 hours for count-only entries)
+- **Stale**: served immediately, refresh in background
+- **Eviction**: 30 days without access
 
-Counts are formatted for readability: exact below 1,000, then abbreviated (`1.2K+`, `42K+`, `1.5M+`).
-
-### Caching
-
-Same stale-while-revalidate strategy as the image endpoint: 24-hour `Cache-Control` (`max-age=86400`), serve stale while refreshing in the background, 30-day KV eviction.
-
-### Count-only entries
-
-The badge endpoint is lightweight. On a cache miss, it creates a **count-only** KV entry (dependent count without full repo data), which avoids the expensive search + enrichment pipeline. A subsequent image request for the same package upgrades the entry to a full entry with repo details.
+HTTP responses are also cached via Cloudflare's edge cache (`Cache-Control: max-age=86400`).
 
 ## Development
 
