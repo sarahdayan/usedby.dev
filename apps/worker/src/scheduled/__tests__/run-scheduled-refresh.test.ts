@@ -439,6 +439,27 @@ describe('runScheduledRefresh', () => {
     expect(result.refreshed).toBe(1);
   });
 
+  it('skips pending entries', async () => {
+    const pendingMeta: CacheMetadata = {
+      fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: NOW.toISOString(),
+      partial: true,
+      pending: true,
+    };
+
+    ENV.DEPENDENTS_CACHE = createMockKV({
+      keys: [{ name: 'npm:react', metadata: pendingMeta }],
+    });
+
+    const result = await runScheduledRefresh(ENV, NOW);
+
+    expect(result.keysScanned).toBe(1);
+    expect(result.refreshed).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(refreshDependents).not.toHaveBeenCalled();
+    expect(refreshCountOnly).not.toHaveBeenCalled();
+  });
+
   it('dispatches to refreshDependents for full entries', async () => {
     const fullMeta: CacheMetadata = {
       fetchedAt: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),

@@ -67,6 +67,10 @@ export async function runScheduledRefresh(
         continue;
       }
 
+      if (key.metadata.pending) {
+        continue;
+      }
+
       const fetchedAt = new Date(key.metadata.fetchedAt).getTime();
       const partial = key.metadata.partial;
       const lastAccessedAtMs = new Date(key.metadata.lastAccessedAt).getTime();

@@ -303,6 +303,97 @@ describe('getDependents', () => {
     expect(options.waitUntil).toHaveBeenCalledTimes(1);
   });
 
+  it('enqueues and returns pending when queue is provided on miss', async () => {
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const queue = createMockQueue();
+    const options = createOptions({ queue });
+    const result = await getDependents(options);
+
+    expect(result).toEqual({
+      repos: [],
+      fromCache: false,
+      refreshing: false,
+      pending: true,
+    });
+    expect(refreshDependents).not.toHaveBeenCalled();
+    expect(writeCache).toHaveBeenCalledWith(
+      options.kv,
+      'npm:react',
+      expect.objectContaining({ pending: true, repos: [] })
+    );
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platform: 'npm',
+        packageName: 'react',
+      })
+    );
+  });
+
+  it('skips enqueue when lock is held but still returns pending', async () => {
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+
+    const kv = createMockKV();
+    const lockKey = buildLockKey('npm:react');
+    (kv.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+      Promise.resolve(key === lockKey ? '1' : null)
+    );
+
+    const queue = createMockQueue();
+    const options = createOptions({ kv, queue });
+    const result = await getDependents(options);
+
+    expect(result.pending).toBe(true);
+    expect(queue.send).not.toHaveBeenCalled();
+    expect(writeCache).not.toHaveBeenCalled();
+  });
+
+  it('acquires lock when enqueuing', async () => {
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const kv = createMockKV();
+    const queue = createMockQueue();
+    const options = createOptions({ kv, queue });
+    await getDependents(options);
+
+    const lockKey = buildLockKey('npm:react');
+    expect(kv.put).toHaveBeenCalledWith(lockKey, '1', {
+      expirationTtl: 300,
+    });
+  });
+
+  it('runs synchronous pipeline when queue is not provided on miss', async () => {
+    const entry = createEntry({ fetchedAt: NOW.toISOString() });
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+    vi.mocked(refreshDependents).mockResolvedValue(entry);
+    vi.mocked(writeCache).mockResolvedValue();
+
+    const options = createOptions();
+    const result = await getDependents(options);
+
+    expect(result.pending).toBeUndefined();
+    expect(refreshDependents).toHaveBeenCalled();
+  });
+
+  it('runs existence check before enqueuing', async () => {
+    vi.mocked(buildCacheKey).mockReturnValue('npm:react');
+    vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
+
+    const existenceCheck = vi.fn().mockResolvedValue(false);
+    const queue = createMockQueue();
+    const options = createOptions({ queue, existenceCheck });
+    const result = await getDependents(options);
+
+    expect(result.repos).toBeNull();
+    expect(queue.send).not.toHaveBeenCalled();
+  });
+
   it('propagates pipeline errors on miss', async () => {
     vi.mocked(buildCacheKey).mockReturnValue('npm:react');
     vi.mocked(readCache).mockResolvedValue({ status: 'miss', entry: null });
@@ -562,6 +653,13 @@ function createMockKV() {
     put: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
   } as unknown as KVNamespace;
+}
+
+function createMockQueue() {
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+    sendBatch: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Queue;
 }
 
 function createOptions(overrides: Partial<GetDependentsOptions> = {}) {

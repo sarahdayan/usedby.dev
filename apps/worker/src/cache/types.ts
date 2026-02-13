@@ -5,6 +5,7 @@ export interface CacheMetadata {
   lastAccessedAt: string;
   partial: boolean;
   countOnly?: boolean;
+  pending?: boolean;
 }
 
 export interface CacheEntry extends CacheMetadata {
