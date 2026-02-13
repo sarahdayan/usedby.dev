@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Footer } from '@/components/footer';
 import { DependentList } from '@/components/package-page/dependent-list';
 import { EmbedSnippets } from '@/components/package-page/embed-snippets';
@@ -78,6 +79,7 @@ export default async function PackagePage({ params }: PageProps) {
             </h1>
             <Badge variant="secondary">{ecosystem.label}</Badge>
           </div>
+          <Skeleton className="mt-2 h-6 w-40" />
         </header>
 
         <PendingPage registry={registry} packageName={packageName} />
