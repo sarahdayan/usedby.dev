@@ -11,9 +11,13 @@ export function CopyButton({ text }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   async function onCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable (e.g. non-HTTPS, permission denied)
+    }
   }
 
   return (

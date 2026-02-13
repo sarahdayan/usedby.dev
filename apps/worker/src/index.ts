@@ -12,7 +12,6 @@ import { rubyStrategy } from './ecosystems/ruby';
 import { rustStrategy } from './ecosystems/rust';
 import { goStrategy } from './ecosystems/go';
 import { getLimits } from './github/pipeline-limits';
-import type { ScoredRepo } from './github/types';
 import { runScheduledRefresh } from './scheduled/run-scheduled-refresh';
 import { fetchAvatars } from './svg/fetch-avatars';
 import {
@@ -355,7 +354,7 @@ async function handleData(
     const versionDistribution: Record<string, number> = {};
 
     for (const repo of repos) {
-      const version = (repo as ScoredRepo & { version?: string }).version;
+      const version = repo.version;
       if (version) {
         versionDistribution[version] = (versionDistribution[version] ?? 0) + 1;
       }
@@ -374,9 +373,7 @@ async function handleData(
         lastPush: r.lastPush,
         avatarUrl: r.avatarUrl,
         score: r.score,
-        ...((r as ScoredRepo & { version?: string }).version != null && {
-          version: (r as ScoredRepo & { version?: string }).version,
-        }),
+        ...(r.version != null && { version: r.version }),
       })),
       versionDistribution,
     };

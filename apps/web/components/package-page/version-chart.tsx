@@ -16,6 +16,8 @@ interface VersionChartProps {
 }
 
 const MAX_VERSIONS = 10;
+const BAR_HEIGHT = 40;
+const MIN_CHART_HEIGHT = 200;
 
 const CHART_CONFIG = {
   count: {
@@ -80,6 +82,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
           <button
             type="button"
             onClick={() => setSelectedMajor(null)}
+            aria-pressed={selectedMajor === null}
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
               selectedMajor === null
@@ -89,23 +92,26 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
           >
             All
           </button>
-          {majorData.map(({ version }) => (
-            <button
-              key={version}
-              type="button"
-              onClick={() =>
-                setSelectedMajor(version.replace(/^v/, '').replace(/\.x$/, ''))
-              }
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all',
-                selectedMajor === version.replace(/^v/, '').replace(/\.x$/, '')
-                  ? 'bg-secondary text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {version}
-            </button>
-          ))}
+          {majorData.map(({ version }) => {
+            const major = version.replace(/^v/, '').replace(/\.x$/, '');
+
+            return (
+              <button
+                key={version}
+                type="button"
+                onClick={() => setSelectedMajor(major)}
+                aria-pressed={selectedMajor === major}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all',
+                  selectedMajor === major
+                    ? 'bg-secondary text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {version}
+              </button>
+            );
+          })}
         </div>
       )}
       <div className="mt-4 rounded-xl border border-border bg-card p-6">
@@ -114,7 +120,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
           className="aspect-auto h-[var(--chart-height)] w-full"
           style={
             {
-              '--chart-height': `${Math.max(data.length * 40, 200)}px`,
+              '--chart-height': `${Math.max(data.length * BAR_HEIGHT, MIN_CHART_HEIGHT)}px`,
             } as React.CSSProperties
           }
         >

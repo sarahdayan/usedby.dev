@@ -196,6 +196,7 @@ export function DependentList({ repos }: DependentListProps) {
                   type="button"
                   onClick={() => setPage((page) => Math.max(1, page - 1))}
                   disabled={currentPage <= 1}
+                  aria-label="Previous page"
                   className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
                 >
                   Previous
@@ -206,6 +207,7 @@ export function DependentList({ repos }: DependentListProps) {
                     setPage((page) => Math.min(totalPages, page + 1))
                   }
                   disabled={currentPage >= totalPages}
+                  aria-label="Next page"
                   className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
                 >
                   Next
@@ -219,8 +221,10 @@ export function DependentList({ repos }: DependentListProps) {
   );
 }
 
+const STARS_COMPACT_THRESHOLD = 10_000;
+
 function formatStars(count: number): string {
-  if (count >= 10_000) {
+  if (count >= STARS_COMPACT_THRESHOLD) {
     return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
   }
 
