@@ -86,7 +86,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
               selectedMajor === null
-                ? 'bg-secondary text-foreground shadow-sm'
+                ? 'bg-secondary text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -104,7 +104,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
                 className={cn(
                   'rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-all',
                   selectedMajor === major
-                    ? 'bg-secondary text-foreground shadow-sm'
+                    ? 'bg-secondary text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -117,7 +117,7 @@ export function VersionChart({ versionDistribution }: VersionChartProps) {
       <div className="mt-4 rounded-xl border border-border bg-card p-6">
         <ChartContainer
           config={CHART_CONFIG}
-          className="aspect-auto h-[var(--chart-height)] w-full"
+          className="aspect-auto h-(--chart-height) w-full"
           style={
             {
               '--chart-height': `${Math.max(data.length * BAR_HEIGHT, MIN_CHART_HEIGHT)}px`,

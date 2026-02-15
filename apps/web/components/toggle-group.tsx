@@ -20,7 +20,7 @@ export function ToggleGroup<T extends string>({
           onClick={() => onChange(opt.value)}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
             value === opt.value
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >

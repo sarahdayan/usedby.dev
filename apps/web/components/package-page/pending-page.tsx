@@ -79,7 +79,7 @@ export function PendingPage({ registry, packageName }: PendingPageProps) {
         <div className="relative mt-4">
           {/* Overlay */}
           <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-12 sm:items-center sm:pt-0">
-            <div className="pointer-events-auto flex flex-col items-center gap-2 rounded-lg border border-border bg-background/80 px-4 py-3 shadow-sm backdrop-blur-sm">
+            <div className="pointer-events-auto flex flex-col items-center gap-2 rounded-lg border border-border bg-background/80 px-4 py-3 shadow-xs backdrop-blur-xs">
               <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
               <p
                 key={message}

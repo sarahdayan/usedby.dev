@@ -62,6 +62,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^24.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -70,7 +71,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.1",
     "postcss": "^8.5",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.1.18",
     "typescript": "5.9.3"
   }
 }
