@@ -15,9 +15,12 @@ export default function Loading() {
           </Link>
         </nav>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Skeleton className="h-8 w-48 sm:h-9" />
-          <Skeleton className="h-6 w-16 rounded-full" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Skeleton className="h-8 w-48 sm:h-9" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-24" />
         </div>
         <Skeleton className="mt-2 h-7 w-40" />
       </header>

@@ -72,11 +72,14 @@ export default async function PackagePage({ params }: PageProps) {
             </Link>
           </nav>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl font-semibold text-foreground sm:text-3xl">
-              {packageName}
-            </h1>
-            <Badge variant="secondary">{ecosystem.label}</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-mono text-2xl font-semibold text-foreground sm:text-3xl">
+                {packageName}
+              </h1>
+              <Badge variant="secondary">{ecosystem.label}</Badge>
+            </div>
+            <Skeleton className="h-4 w-24" />
           </div>
           <Skeleton className="mt-2 h-6 w-40" />
         </header>
@@ -101,11 +104,19 @@ export default async function PackagePage({ params }: PageProps) {
           </Link>
         </nav>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-mono text-2xl font-semibold text-foreground sm:text-3xl">
-            {packageName}
-          </h1>
-          <Badge variant="secondary">{ecosystem.label}</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-2xl font-semibold text-foreground sm:text-3xl">
+              {packageName}
+            </h1>
+            <Badge variant="secondary">{ecosystem.label}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground/80">
+            Updated{' '}
+            <time dateTime={data.fetchedAt}>
+              {formatRelativeDate(data.fetchedAt)}
+            </time>
+          </p>
         </div>
         <p className="mt-2 text-lg text-muted-foreground">
           {formatCount(dependentCount)} dependent
@@ -127,4 +138,26 @@ function findEcosystem(id: string) {
 
 function formatCount(n: number): string {
   return new Intl.NumberFormat('en-US').format(n);
+}
+
+function formatRelativeDate(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(ms / 60_000);
+  const hours = Math.floor(ms / 3_600_000);
+  const days = Math.floor(ms / 86_400_000);
+
+  if (minutes < 1) {
+    return 'just now';
+  }
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+  if (days === 1) {
+    return 'yesterday';
+  }
+
+  return `${days}d ago`;
 }
