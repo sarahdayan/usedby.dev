@@ -73,8 +73,9 @@ export function PendingPage({ registry, packageName }: PendingPageProps) {
       <section className="mx-auto max-w-5xl px-6 py-12">
         <h2 className="text-xl font-semibold text-foreground">Dependents</h2>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex items-center gap-3">
           <Skeleton className="h-9 w-full sm:max-w-xs" />
+          <Skeleton className="ml-auto h-9 w-21.25 rounded-md" />
         </div>
 
         {/* Table / cards wrapper with overlay */}

@@ -81,7 +81,7 @@ export default async function PackagePage({ params }: PageProps) {
             </div>
             <Skeleton className="h-4 w-24" />
           </div>
-          <Skeleton className="mt-2 h-6 w-40" />
+          <Skeleton className="mt-2 h-7 w-40" />
         </header>
 
         <PendingPage registry={registry} packageName={packageName} />
@@ -92,34 +92,7 @@ export default async function PackagePage({ params }: PageProps) {
   const { data } = result;
 
   const dependentCount = Math.max(data.dependentCount, data.repos.length);
-  const depTypeCounts = { dependencies: 0, devDependencies: 0 };
-
-  for (const repo of data.repos) {
-    if (
-      repo.depType === 'dependencies' ||
-      repo.depType === 'peerDependencies' ||
-      repo.depType === 'optionalDependencies'
-    ) {
-      depTypeCounts.dependencies++;
-    } else if (repo.depType === 'devDependencies') {
-      depTypeCounts.devDependencies++;
-    }
-  }
-
-  const depTypeOptions =
-    depTypeCounts.dependencies > 0 || depTypeCounts.devDependencies > 0
-      ? [
-          { label: `All (${data.repos.length})`, value: 'all' as const },
-          {
-            label: `Dependencies (${depTypeCounts.dependencies})`,
-            value: 'dependencies' as const,
-          },
-          {
-            label: `Dev (${depTypeCounts.devDependencies})`,
-            value: 'devDependencies' as const,
-          },
-        ]
-      : null;
+  const hasDepTypes = data.repos.some((repo) => repo.depType != null);
 
   return (
     <>
@@ -153,7 +126,7 @@ export default async function PackagePage({ params }: PageProps) {
         </p>
       </header>
 
-      <DependentList repos={data.repos} depTypeOptions={depTypeOptions} />
+      <DependentList repos={data.repos} hasDepTypes={hasDepTypes} />
       <VersionChart versionDistribution={data.versionDistribution} />
       <EmbedSnippets platform={registry} packageName={packageName} />
       <TrendsPlaceholder />

@@ -9,6 +9,7 @@ export interface PackageRepo {
   lastPush: string;
   avatarUrl: string;
   score: number;
+  archived?: boolean;
   version?: string;
   depType?: string;
 }

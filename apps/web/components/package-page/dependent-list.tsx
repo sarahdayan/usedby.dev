@@ -2,10 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ListFilter } from 'lucide-react';
 import Link from 'next/link';
 
-import { ToggleGroup } from '@/components/toggle-group';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -15,39 +24,39 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import type { PackageRepo } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'stars' | 'activity' | 'name';
 type SortDirection = 'asc' | 'desc';
-export type DepTypeFilter = 'all' | 'dependencies' | 'devDependencies';
+type DepTypeFilter = 'all' | 'dependencies' | 'devDependencies';
 
 interface DependentListProps {
   repos: PackageRepo[];
-  depTypeOptions: { label: string; value: DepTypeFilter }[] | null;
+  hasDepTypes: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export function DependentList({ repos, depTypeOptions }: DependentListProps) {
+export function DependentList({ repos, hasDepTypes }: DependentListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('stars');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [search, setSearch] = useState('');
   const [depTypeFilter, setDepTypeFilter] = useState<DepTypeFilter>('all');
+  const [hideInactive, setHideInactive] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
 
-  const filtered = useMemo(() => {
+  const hasInactive = repos.some((repo) => isInactive(repo));
+  const hasFilters = hasDepTypes || hasInactive;
+  const hasActiveFilters = depTypeFilter !== 'all' || hideInactive;
+
+  const baseFiltered = useMemo(() => {
     let result = repos;
 
-    if (depTypeFilter === 'dependencies') {
-      result = result.filter(
-        (repo) =>
-          repo.depType === 'dependencies' ||
-          repo.depType === 'peerDependencies' ||
-          repo.depType === 'optionalDependencies'
-      );
-    } else if (depTypeFilter === 'devDependencies') {
-      result = result.filter((repo) => repo.depType === 'devDependencies');
+    if (hideInactive) {
+      result = result.filter((repo) => !isInactive(repo));
     }
 
     const query = search.trim().toLowerCase();
@@ -61,8 +70,70 @@ export function DependentList({ repos, depTypeOptions }: DependentListProps) {
       );
     }
 
+    return result;
+  }, [repos, search, hideInactive]);
+
+  const depTypeCounts = useMemo(() => {
+    if (!hasDepTypes) {
+      return null;
+    }
+
+    let dependencies = 0;
+    let devDependencies = 0;
+
+    for (const repo of baseFiltered) {
+      if (
+        repo.depType === 'dependencies' ||
+        repo.depType === 'peerDependencies' ||
+        repo.depType === 'optionalDependencies'
+      ) {
+        dependencies++;
+      } else if (repo.depType === 'devDependencies') {
+        devDependencies++;
+      }
+    }
+
+    return { all: baseFiltered.length, dependencies, devDependencies };
+  }, [hasDepTypes, baseFiltered]);
+
+  const activeCount = useMemo(() => {
+    const active = baseFiltered.filter((repo) => !isInactive(repo));
+
+    if (!depTypeCounts) {
+      return active.length;
+    }
+
+    if (depTypeFilter === 'dependencies') {
+      return active.filter(
+        (repo) =>
+          repo.depType === 'dependencies' ||
+          repo.depType === 'peerDependencies' ||
+          repo.depType === 'optionalDependencies'
+      ).length;
+    }
+    if (depTypeFilter === 'devDependencies') {
+      return active.filter((repo) => repo.depType === 'devDependencies').length;
+    }
+
+    return active.length;
+  }, [baseFiltered, depTypeCounts, depTypeFilter]);
+
+  const filtered = useMemo(() => {
+    let result = baseFiltered;
+
+    if (depTypeFilter === 'dependencies') {
+      result = result.filter(
+        (repo) =>
+          repo.depType === 'dependencies' ||
+          repo.depType === 'peerDependencies' ||
+          repo.depType === 'optionalDependencies'
+      );
+    } else if (depTypeFilter === 'devDependencies') {
+      result = result.filter((repo) => repo.depType === 'devDependencies');
+    }
+
     return sortRepos(result, sortKey, sortDirection);
-  }, [repos, sortKey, sortDirection, search, depTypeFilter]);
+  }, [baseFiltered, sortKey, sortDirection, depTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -86,16 +157,11 @@ export function DependentList({ repos, depTypeOptions }: DependentListProps) {
     setPage(1);
   }
 
-  function onDepTypeChange(value: DepTypeFilter) {
-    setDepTypeFilter(value);
-    setPage(1);
-  }
-
   return (
     <section className="mx-auto max-w-5xl px-6 py-12">
       <h2 className="text-xl font-semibold text-foreground">Dependents</h2>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex items-center gap-3">
         <Input
           type="search"
           placeholder="Filter dependents…"
@@ -103,12 +169,79 @@ export function DependentList({ repos, depTypeOptions }: DependentListProps) {
           onChange={(event) => onSearchChange(event.target.value)}
           className="h-9 w-full bg-card sm:max-w-xs"
         />
-        {depTypeOptions && (
-          <ToggleGroup
-            options={depTypeOptions}
-            value={depTypeFilter}
-            onChange={onDepTypeChange}
-          />
+        {hasFilters && (
+          <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'ml-auto inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium whitespace-nowrap transition-colors',
+                  hasActiveFilters
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <ListFilter className="size-4" />
+                Filter
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {depTypeCounts && (
+                <>
+                  <DropdownMenuLabel>Dependency type</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={depTypeFilter}
+                    onValueChange={(value) => {
+                      setDepTypeFilter(value as DepTypeFilter);
+                      setPage(1);
+                    }}
+                  >
+                    <DropdownMenuRadioItem
+                      value="all"
+                      className="gap-2"
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      All <Badge variant="secondary">{depTypeCounts.all}</Badge>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="dependencies"
+                      className="gap-2"
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      Dependencies{' '}
+                      <Badge variant="secondary">
+                        {depTypeCounts.dependencies}
+                      </Badge>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="devDependencies"
+                      className="gap-2"
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      Dev{' '}
+                      <Badge variant="secondary">
+                        {depTypeCounts.devDependencies}
+                      </Badge>
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </>
+              )}
+              {depTypeCounts && hasInactive && <DropdownMenuSeparator />}
+              {hasInactive && (
+                <DropdownMenuCheckboxItem
+                  className="gap-2"
+                  checked={hideInactive}
+                  onSelect={(event) => event.preventDefault()}
+                  onCheckedChange={(checked) => {
+                    setHideInactive(checked === true);
+                    setPage(1);
+                  }}
+                >
+                  Active only <Badge variant="secondary">{activeCount}</Badge>
+                </DropdownMenuCheckboxItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
@@ -333,6 +466,18 @@ function formatRelativeTime(dateString: string): string {
   } catch {
     return '\u2014';
   }
+}
+
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+function isInactive(repo: PackageRepo): boolean {
+  if (repo.archived) {
+    return true;
+  }
+
+  const lastPush = new Date(repo.lastPush).getTime();
+
+  return Date.now() - lastPush > ONE_YEAR_MS;
 }
 
 function sortRepos(

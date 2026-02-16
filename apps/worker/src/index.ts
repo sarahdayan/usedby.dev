@@ -417,6 +417,7 @@ async function handleData(
         lastPush: r.lastPush,
         avatarUrl: r.avatarUrl,
         score: r.score,
+        ...(r.archived != null && { archived: r.archived }),
         ...(r.version != null && { version: r.version }),
         ...(r.depType != null && { depType: r.depType }),
       })),
