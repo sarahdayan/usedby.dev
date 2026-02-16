@@ -90,7 +90,36 @@ export default async function PackagePage({ params }: PageProps) {
   }
 
   const { data } = result;
+
   const dependentCount = Math.max(data.dependentCount, data.repos.length);
+  const depTypeCounts = { dependencies: 0, devDependencies: 0 };
+
+  for (const repo of data.repos) {
+    if (
+      repo.depType === 'dependencies' ||
+      repo.depType === 'peerDependencies' ||
+      repo.depType === 'optionalDependencies'
+    ) {
+      depTypeCounts.dependencies++;
+    } else if (repo.depType === 'devDependencies') {
+      depTypeCounts.devDependencies++;
+    }
+  }
+
+  const depTypeOptions =
+    depTypeCounts.dependencies > 0 || depTypeCounts.devDependencies > 0
+      ? [
+          { label: `All (${data.repos.length})`, value: 'all' as const },
+          {
+            label: `Dependencies (${depTypeCounts.dependencies})`,
+            value: 'dependencies' as const,
+          },
+          {
+            label: `Dev (${depTypeCounts.devDependencies})`,
+            value: 'devDependencies' as const,
+          },
+        ]
+      : null;
 
   return (
     <>
@@ -124,7 +153,7 @@ export default async function PackagePage({ params }: PageProps) {
         </p>
       </header>
 
-      <DependentList repos={data.repos} />
+      <DependentList repos={data.repos} depTypeOptions={depTypeOptions} />
       <VersionChart versionDistribution={data.versionDistribution} />
       <EmbedSnippets platform={registry} packageName={packageName} />
       <TrendsPlaceholder />

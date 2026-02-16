@@ -10,6 +10,7 @@ export interface PackageRepo {
   avatarUrl: string;
   score: number;
   version?: string;
+  depType?: string;
 }
 
 export interface PackageData {
