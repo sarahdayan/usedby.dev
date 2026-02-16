@@ -2,49 +2,67 @@
 
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 
 import { ToggleGroup } from '@/components/toggle-group';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { PackageRepo } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
-type SortKey = 'score' | 'stars' | 'activity' | 'name';
+type SortKey = 'stars' | 'activity' | 'name';
+type SortDirection = 'asc' | 'desc';
+export type DepTypeFilter = 'all' | 'dependencies' | 'devDependencies';
 
 interface DependentListProps {
   repos: PackageRepo[];
+  depTypeOptions: { label: string; value: DepTypeFilter }[] | null;
 }
 
 const PAGE_SIZE = 10;
 
-const SORT_OPTIONS: { label: string; value: SortKey }[] = [
-  { label: 'Score', value: 'score' },
-  { label: 'Stars', value: 'stars' },
-  { label: 'Activity', value: 'activity' },
-  { label: 'Name', value: 'name' },
-];
-
-export function DependentList({ repos }: DependentListProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('score');
+export function DependentList({ repos, depTypeOptions }: DependentListProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('stars');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [search, setSearch] = useState('');
+  const [depTypeFilter, setDepTypeFilter] = useState<DepTypeFilter>('all');
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    let result = repos;
 
-    if (!query) {
-      return sortRepos(repos, sortKey);
+    if (depTypeFilter === 'dependencies') {
+      result = result.filter(
+        (repo) =>
+          repo.depType === 'dependencies' ||
+          repo.depType === 'peerDependencies' ||
+          repo.depType === 'optionalDependencies'
+      );
+    } else if (depTypeFilter === 'devDependencies') {
+      result = result.filter((repo) => repo.depType === 'devDependencies');
     }
 
-    return sortRepos(
-      repos.filter(
+    const query = search.trim().toLowerCase();
+
+    if (query) {
+      result = result.filter(
         (repo) =>
           repo.fullName.toLowerCase().includes(query) ||
           repo.owner.toLowerCase().includes(query) ||
           repo.name.toLowerCase().includes(query)
-      ),
-      sortKey
-    );
-  }, [repos, sortKey, search]);
+      );
+    }
+
+    return sortRepos(result, sortKey, sortDirection);
+  }, [repos, sortKey, sortDirection, search, depTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -59,7 +77,17 @@ export function DependentList({ repos }: DependentListProps) {
   }
 
   function onSortChange(key: SortKey) {
-    setSortKey(key);
+    if (key === sortKey) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDirection(key === 'name' ? 'asc' : 'desc');
+    }
+    setPage(1);
+  }
+
+  function onDepTypeChange(value: DepTypeFilter) {
+    setDepTypeFilter(value);
     setPage(1);
   }
 
@@ -75,11 +103,13 @@ export function DependentList({ repos }: DependentListProps) {
           onChange={(event) => onSearchChange(event.target.value)}
           className="h-9 w-full bg-card sm:max-w-xs"
         />
-        <ToggleGroup
-          options={SORT_OPTIONS}
-          value={sortKey}
-          onChange={onSortChange}
-        />
+        {depTypeOptions && (
+          <ToggleGroup
+            options={depTypeOptions}
+            value={depTypeFilter}
+            onChange={onDepTypeChange}
+          />
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -89,22 +119,39 @@ export function DependentList({ repos }: DependentListProps) {
       ) : (
         <>
           <div className="mt-4 hidden overflow-hidden rounded-xl border border-border sm:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-card text-left text-xs text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Repository</th>
-                  <th className="px-4 py-3 font-medium">Stars</th>
-                  <th className="px-4 py-3 font-medium">Last activity</th>
-                  <th className="px-4 py-3 font-medium">Version</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-card hover:bg-card">
+                  <SortableColumnHeader
+                    label="Repository"
+                    sortKey="name"
+                    activeSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={onSortChange}
+                  />
+                  <SortableColumnHeader
+                    label="Stars"
+                    sortKey="stars"
+                    activeSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={onSortChange}
+                  />
+                  <SortableColumnHeader
+                    label="Last activity"
+                    sortKey="activity"
+                    activeSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={onSortChange}
+                  />
+                  <TableHead className="px-4 text-xs font-medium">
+                    Version
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {paginated.map((repo) => (
-                  <tr
-                    key={repo.fullName}
-                    className="border-b border-border last:border-b-0 transition-colors hover:bg-card/60"
-                  >
-                    <td className="px-4 py-3">
+                  <TableRow key={repo.fullName}>
+                    <TableCell className="px-4 py-3">
                       <Link
                         href={`https://github.com/${repo.fullName}`}
                         target="_blank"
@@ -121,20 +168,20 @@ export function DependentList({ repos }: DependentListProps) {
                         />
                         <span className="truncate">{repo.fullName}</span>
                       </Link>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {formatStars(repo.stars)}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-xs text-muted-foreground">
                       {formatRelativeTime(repo.lastPush)}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {repo.version ?? '\u2014'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           <div className="mt-4 flex flex-col gap-3 sm:hidden">
@@ -222,6 +269,54 @@ export function DependentList({ repos }: DependentListProps) {
   );
 }
 
+interface SortableColumnHeaderProps {
+  label: string;
+  sortKey: SortKey;
+  activeSortKey: SortKey;
+  sortDirection: SortDirection;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}
+
+function SortableColumnHeader({
+  label,
+  sortKey,
+  activeSortKey,
+  sortDirection,
+  onSort,
+  className,
+}: SortableColumnHeaderProps) {
+  const isActive = activeSortKey === sortKey;
+
+  return (
+    <TableHead className={cn('px-4', className)}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        aria-sort={
+          isActive
+            ? sortDirection === 'asc'
+              ? 'ascending'
+              : 'descending'
+            : undefined
+        }
+      >
+        {label}
+        {isActive ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="size-3.5" />
+          ) : (
+            <ArrowDown className="size-3.5" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 const STARS_COMPACT_THRESHOLD = 10_000;
 
 function formatStars(count: number): string {
@@ -240,17 +335,24 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
-function sortRepos(repos: PackageRepo[], key: SortKey): PackageRepo[] {
+function sortRepos(
+  repos: PackageRepo[],
+  key: SortKey,
+  direction: SortDirection
+): PackageRepo[] {
+  const factor = direction === 'asc' ? 1 : -1;
+
   return [...repos].sort((a, b) => {
     switch (key) {
-      case 'score':
-        return b.score - a.score;
       case 'stars':
-        return b.stars - a.stars;
+        return (a.stars - b.stars) * factor;
       case 'activity':
-        return new Date(b.lastPush).getTime() - new Date(a.lastPush).getTime();
+        return (
+          (new Date(a.lastPush).getTime() - new Date(b.lastPush).getTime()) *
+          factor
+        );
       case 'name':
-        return a.fullName.localeCompare(b.fullName);
+        return a.fullName.localeCompare(b.fullName) * factor;
       default:
         return 0;
     }

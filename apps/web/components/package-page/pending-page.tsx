@@ -2,9 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { Loader2Icon } from 'lucide-react';
+import { ArrowDown, ArrowUpDown, Loader2Icon } from 'lucide-react';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useLoadingMessage } from '@/hooks/use-loading-message';
 import { useReadyNotification } from '@/hooks/use-ready-notification';
 import { API_BASE } from '@/lib/api';
@@ -67,12 +75,6 @@ export function PendingPage({ registry, packageName }: PendingPageProps) {
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Skeleton className="h-9 w-full sm:max-w-xs" />
-          <div className="flex gap-1.5">
-            <Skeleton className="h-8 w-14 rounded-md" />
-            <Skeleton className="h-8 w-14 rounded-md" />
-            <Skeleton className="h-8 w-16 rounded-md" />
-            <Skeleton className="h-8 w-14 rounded-md" />
-          </div>
         </div>
 
         {/* Table / cards wrapper with overlay */}
@@ -95,40 +97,54 @@ export function PendingPage({ registry, packageName }: PendingPageProps) {
 
           {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-xl border border-border sm:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-card text-left text-xs text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Repository</th>
-                  <th className="px-4 py-3 font-medium">Stars</th>
-                  <th className="px-4 py-3 font-medium">Last activity</th>
-                  <th className="px-4 py-3 font-medium">Version</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-card hover:bg-card">
+                  <TableHead className="px-4">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      Repository
+                      <ArrowUpDown className="size-3.5 opacity-40" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="px-4">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      Stars
+                      <ArrowDown className="size-3.5" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="px-4">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      Last activity
+                      <ArrowUpDown className="size-3.5 opacity-40" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium">
+                    Version
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {Array.from({ length: 5 }, (_, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-border last:border-b-0"
-                  >
-                    <td className="px-4 py-3">
+                  <TableRow key={i}>
+                    <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <Skeleton className="h-6 w-6 rounded-full" />
                         <Skeleton className="h-4 w-40" />
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <Skeleton className="h-3.5 w-12" />
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <Skeleton className="h-3.5 w-24" />
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <Skeleton className="h-3.5 w-14" />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile cards */}
