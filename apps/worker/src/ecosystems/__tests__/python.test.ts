@@ -28,42 +28,48 @@ describe('pythonStrategy', () => {
     it('returns found for exact package name', () => {
       expect(pythonStrategy.isDependency('requests\n', 'requests')).toEqual({
         found: true,
+        depType: 'dependencies',
       });
     });
 
     it('returns found with version specifier', () => {
       expect(
         pythonStrategy.isDependency('requests==2.28.0\n', 'requests')
-      ).toEqual({ found: true, version: '==2.28.0' });
+      ).toEqual({ found: true, version: '==2.28.0', depType: 'dependencies' });
     });
 
     it('returns found with range specifier', () => {
       expect(
         pythonStrategy.isDependency('requests>=2.0,<3.0\n', 'requests')
-      ).toEqual({ found: true, version: '>=2.0,<3.0' });
+      ).toEqual({
+        found: true,
+        version: '>=2.0,<3.0',
+        depType: 'dependencies',
+      });
     });
 
     it('returns found with extras and version', () => {
       expect(
         pythonStrategy.isDependency('requests[security]>=2.0\n', 'requests')
-      ).toEqual({ found: true, version: '>=2.0' });
+      ).toEqual({ found: true, version: '>=2.0', depType: 'dependencies' });
     });
 
     it('returns found with extras only', () => {
       expect(
         pythonStrategy.isDependency('requests[security]\n', 'requests')
-      ).toEqual({ found: true });
+      ).toEqual({ found: true, depType: 'dependencies' });
     });
 
     it('returns found case-insensitively', () => {
       expect(pythonStrategy.isDependency('Requests\n', 'requests')).toEqual({
         found: true,
+        depType: 'dependencies',
       });
     });
 
     it('returns found with hyphen/underscore normalization', () => {
       expect(pythonStrategy.isDependency('my-package\n', 'my_package')).toEqual(
-        { found: true }
+        { found: true, depType: 'dependencies' }
       );
     });
 

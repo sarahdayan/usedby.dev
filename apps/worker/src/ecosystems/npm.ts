@@ -25,7 +25,7 @@ export const npmStrategy: EcosystemStrategy = {
 
         if (deps != null && typeof deps === 'object' && packageName in deps) {
           const version = (deps as Record<string, string>)[packageName];
-          return { found: true, version };
+          return { found: true, version, depType: key };
         }
       }
     } catch {

@@ -28,6 +28,7 @@ describe('goStrategy', () => {
       expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
         found: true,
         version: 'v1.9.1',
+        depType: 'dependencies',
       });
     });
 
@@ -37,6 +38,7 @@ describe('goStrategy', () => {
       expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
         found: true,
         version: 'v1.9.1',
+        depType: 'dependencies',
       });
     });
 
@@ -46,6 +48,7 @@ describe('goStrategy', () => {
       expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
         found: true,
         version: 'v1.9.1',
+        depType: 'dependencies',
       });
     });
 
@@ -55,6 +58,7 @@ describe('goStrategy', () => {
       expect(goStrategy.isDependency(manifest, 'gin-gonic/gin')).toEqual({
         found: true,
         version: 'v1.9.1',
+        depType: 'dependencies',
       });
     });
 
@@ -94,6 +98,7 @@ describe('goStrategy', () => {
       expect(goStrategy.isDependency(manifest, 'foo.bar/baz')).toEqual({
         found: true,
         version: 'v1.0.0',
+        depType: 'dependencies',
       });
       expect(goStrategy.isDependency(manifest, 'fooXbar/baz')).toEqual({
         found: false,

@@ -28,24 +28,27 @@ describe('rubyStrategy', () => {
     it('returns found for single-quoted gem name', () => {
       expect(rubyStrategy.isDependency("gem 'rails'", 'rails')).toEqual({
         found: true,
+        depType: 'dependencies',
       });
     });
 
     it('returns found for double-quoted gem name', () => {
       expect(rubyStrategy.isDependency('gem "rails"', 'rails')).toEqual({
         found: true,
+        depType: 'dependencies',
       });
     });
 
     it('returns found with version constraint', () => {
       expect(
         rubyStrategy.isDependency("gem 'rails', '~> 7.0'", 'rails')
-      ).toEqual({ found: true, version: '~> 7.0' });
+      ).toEqual({ found: true, version: '~> 7.0', depType: 'dependencies' });
     });
 
     it('returns found with leading whitespace', () => {
       expect(rubyStrategy.isDependency("  gem 'rails'", 'rails')).toEqual({
         found: true,
+        depType: 'dependencies',
       });
     });
 

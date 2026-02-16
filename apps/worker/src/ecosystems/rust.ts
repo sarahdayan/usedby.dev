@@ -16,7 +16,11 @@ export const rustStrategy: EcosystemStrategy = {
     const simplePattern = new RegExp(`^\\s*${escaped}\\s*=\\s*"([^"]*)"`, 'm');
     const simpleMatch = manifestContent.match(simplePattern);
     if (simpleMatch) {
-      return { found: true, version: simpleMatch[1] };
+      return {
+        found: true,
+        version: simpleMatch[1],
+        depType: detectRustDepType(manifestContent, simpleMatch.index!),
+      };
     }
 
     // Inline table: serde = { version = "1.0", ... }
@@ -26,18 +30,27 @@ export const rustStrategy: EcosystemStrategy = {
     );
     const tableMatch = manifestContent.match(tablePattern);
     if (tableMatch) {
-      return { found: true, version: tableMatch[1] };
+      return {
+        found: true,
+        version: tableMatch[1],
+        depType: detectRustDepType(manifestContent, tableMatch.index!),
+      };
     }
 
     // Dotted key: serde.version = "1.0"
     const dottedPattern = new RegExp(`^\\s*${escaped}\\.`, 'm');
-    if (dottedPattern.test(manifestContent)) {
+    const dottedMatch = manifestContent.match(dottedPattern);
+    if (dottedMatch) {
       const dottedVersionPattern = new RegExp(
         `^\\s*${escaped}\\.version\\s*=\\s*"([^"]*)"`,
         'm'
       );
-      const dottedMatch = manifestContent.match(dottedVersionPattern);
-      return { found: true, version: dottedMatch?.[1] };
+      const dottedVersionMatch = manifestContent.match(dottedVersionPattern);
+      return {
+        found: true,
+        version: dottedVersionMatch?.[1],
+        depType: detectRustDepType(manifestContent, dottedMatch.index!),
+      };
     }
 
     return { found: false };
@@ -83,4 +96,22 @@ export const rustStrategy: EcosystemStrategy = {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function detectRustDepType(
+  content: string,
+  matchIndex: number
+): 'dependencies' | 'devDependencies' {
+  const before = content.slice(0, matchIndex);
+  const sectionPattern = /^\[([^\]]+)\]/gm;
+  let lastSection = '';
+  let match: RegExpExecArray | null;
+
+  while ((match = sectionPattern.exec(before)) !== null) {
+    lastSection = match[1]!;
+  }
+
+  return lastSection === 'dev-dependencies'
+    ? 'devDependencies'
+    : 'dependencies';
 }

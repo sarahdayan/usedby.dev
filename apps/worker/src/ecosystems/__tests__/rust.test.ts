@@ -31,6 +31,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'dependencies',
       });
     });
 
@@ -40,6 +41,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'dependencies',
       });
     });
 
@@ -49,6 +51,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'dependencies',
       });
     });
 
@@ -58,6 +61,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'devDependencies',
       });
     });
 
@@ -67,6 +71,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'dependencies',
       });
     });
 
@@ -76,6 +81,7 @@ describe('rustStrategy', () => {
       expect(rustStrategy.isDependency(manifest, 'serde')).toEqual({
         found: true,
         version: '1.0',
+        depType: 'dependencies',
       });
     });
 

@@ -37,6 +37,7 @@ describe('npmStrategy', () => {
       expect(npmStrategy.isDependency(manifest, 'react')).toEqual({
         found: true,
         version: '^18.0.0',
+        depType: 'dependencies',
       });
     });
 
@@ -48,6 +49,7 @@ describe('npmStrategy', () => {
       expect(npmStrategy.isDependency(manifest, 'vitest')).toEqual({
         found: true,
         version: '^1.0.0',
+        depType: 'devDependencies',
       });
     });
 
@@ -59,6 +61,7 @@ describe('npmStrategy', () => {
       expect(npmStrategy.isDependency(manifest, 'react')).toEqual({
         found: true,
         version: '>=17',
+        depType: 'peerDependencies',
       });
     });
 
@@ -70,6 +73,7 @@ describe('npmStrategy', () => {
       expect(npmStrategy.isDependency(manifest, 'fsevents')).toEqual({
         found: true,
         version: '^2.0.0',
+        depType: 'optionalDependencies',
       });
     });
 

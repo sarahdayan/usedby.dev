@@ -33,6 +33,7 @@ describe('phpStrategy', () => {
       expect(phpStrategy.isDependency(manifest, 'laravel/framework')).toEqual({
         found: true,
         version: '^10.0',
+        depType: 'dependencies',
       });
     });
 
@@ -44,6 +45,7 @@ describe('phpStrategy', () => {
       expect(phpStrategy.isDependency(manifest, 'phpunit/phpunit')).toEqual({
         found: true,
         version: '^10.0',
+        depType: 'devDependencies',
       });
     });
 

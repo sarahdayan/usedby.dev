@@ -9,6 +9,7 @@ export interface DependentRepo {
   archived: boolean;
   manifestPath: string;
   version?: string;
+  depType?: string;
   /** @deprecated Use `manifestPath`. Kept for KV backwards compatibility. */
   packageJsonPath?: string;
 }

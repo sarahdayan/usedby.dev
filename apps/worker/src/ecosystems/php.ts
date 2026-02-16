@@ -21,7 +21,9 @@ export const phpStrategy: EcosystemStrategy = {
 
         if (deps != null && typeof deps === 'object' && packageName in deps) {
           const version = (deps as Record<string, string>)[packageName];
-          return { found: true, version };
+          const depType =
+            key === 'require-dev' ? 'devDependencies' : 'dependencies';
+          return { found: true, version, depType };
         }
       }
     } catch {

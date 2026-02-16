@@ -57,6 +57,7 @@ describe('enrichRepos', () => {
         archived: false,
         manifestPath: 'package.json',
         version: '^1.0.0',
+        depType: 'dependencies',
       },
       {
         owner: 'corp',
@@ -69,6 +70,7 @@ describe('enrichRepos', () => {
         archived: true,
         manifestPath: 'package.json',
         version: '^1.0.0',
+        depType: 'dependencies',
       },
     ]);
   });

@@ -51,7 +51,7 @@ export const pythonStrategy: EcosystemStrategy = {
         const afterExtras = rest.replace(/^\[[^\]]*\]/, '');
         const versionMatch = afterExtras.match(/^([><=!~]+.+)/);
         const version = versionMatch ? versionMatch[1]!.trim() : undefined;
-        return { found: true, version };
+        return { found: true, version, depType: 'dependencies' };
       }
     }
 

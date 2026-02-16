@@ -1,6 +1,11 @@
 export interface DependencyResult {
   found: boolean;
   version?: string;
+  depType?:
+    | 'dependencies'
+    | 'devDependencies'
+    | 'peerDependencies'
+    | 'optionalDependencies';
 }
 
 export interface EcosystemStrategy {

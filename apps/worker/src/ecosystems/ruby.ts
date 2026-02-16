@@ -22,7 +22,11 @@ export const rubyStrategy: EcosystemStrategy = {
       return { found: false };
     }
 
-    return { found: true, version: match[3] || undefined };
+    return {
+      found: true,
+      version: match[3] || undefined,
+      depType: 'dependencies',
+    };
   },
 
   async resolveGitHubRepo(packageName: string) {

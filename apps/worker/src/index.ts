@@ -418,6 +418,7 @@ async function handleData(
         avatarUrl: r.avatarUrl,
         score: r.score,
         ...(r.version != null && { version: r.version }),
+        ...(r.depType != null && { depType: r.depType }),
       })),
       versionDistribution,
     };

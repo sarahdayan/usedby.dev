@@ -22,7 +22,7 @@ export const goStrategy: EcosystemStrategy = {
       return { found: false };
     }
 
-    return { found: true, version: match[1] };
+    return { found: true, version: match[1], depType: 'dependencies' };
   },
 
   async resolveGitHubRepo(packageName: string) {

@@ -141,6 +141,7 @@ async function enrichBatch(
       isFork: result.isFork,
       archived: result.isArchived,
       version: depResult.version,
+      depType: depResult.depType,
     });
   }
 
