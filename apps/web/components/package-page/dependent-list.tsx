@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowDown, ArrowUp, ArrowUpDown, ListFilter } from 'lucide-react';
 import Link from 'next/link';
+import { compare, parse } from 'semver';
 
 import {
   DropdownMenu,
@@ -28,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import type { PackageRepo } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-type SortKey = 'stars' | 'activity' | 'name';
+type SortKey = 'stars' | 'activity' | 'name' | 'version';
 type SortDirection = 'asc' | 'desc';
 type DepTypeFilter = 'all' | 'dependencies' | 'devDependencies';
 
@@ -276,9 +277,13 @@ export function DependentList({ repos, hasDepTypes }: DependentListProps) {
                     sortDirection={sortDirection}
                     onSort={onSortChange}
                   />
-                  <TableHead className="px-4 text-xs font-medium">
-                    Version
-                  </TableHead>
+                  <SortableColumnHeader
+                    label="Version"
+                    sortKey="version"
+                    activeSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={onSortChange}
+                  />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -480,6 +485,36 @@ function isInactive(repo: PackageRepo): boolean {
   return Date.now() - lastPush > ONE_YEAR_MS;
 }
 
+function parseSemver(version: string | undefined) {
+  if (!version) {
+    return null;
+  }
+
+  return parse(version.replace(/^[^0-9]*/, ''));
+}
+
+function compareVersions(a: string | undefined, b: string | undefined): number {
+  if (!a && !b) {
+    return 0;
+  }
+  if (!a) {
+    return 1;
+  }
+  if (!b) {
+    return -1;
+  }
+
+  const sa = parseSemver(a);
+  const sb = parseSemver(b);
+
+  if (sa && sb) {
+    return compare(sa, sb);
+  }
+
+  // Fall back to lexical comparison for non-semver versions
+  return a.localeCompare(b);
+}
+
 function sortRepos(
   repos: PackageRepo[],
   key: SortKey,
@@ -498,6 +533,8 @@ function sortRepos(
         );
       case 'name':
         return a.fullName.localeCompare(b.fullName) * factor;
+      case 'version':
+        return compareVersions(a.version, b.version) * factor;
       default:
         return 0;
     }
