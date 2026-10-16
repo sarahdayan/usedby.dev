@@ -71,7 +71,7 @@
     "@usedby.dev/eslint-config": "*",
     "@usedby.dev/typescript-config": "*",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.39.1",
+    "eslint": "^10.0.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.3"
